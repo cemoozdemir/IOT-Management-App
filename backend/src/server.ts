@@ -10,6 +10,7 @@ import { verifyToken } from "./utils/auth";
 import { authenticate, authorizeRole } from "./middleware/authMiddleware";
 import User from "./models/User";
 import sequelize from "./config/database";
+import deviceRoutes from "./routes/device";
 
 sequelize.sync({ force: true }).then(() => {
   console.log("Database synchronized.");
@@ -27,6 +28,8 @@ app.use(
     max: 100,
   })
 );
+app.use("/api/auth", authRoutes);
+app.use("/api/devices", deviceRoutes);
 
 app.get("/api/admin", authenticate, authorizeRole("admin"), (req, res) => {
   res.json({ message: "Admin access granted" });
@@ -35,8 +38,6 @@ app.get("/api/admin", authenticate, authorizeRole("admin"), (req, res) => {
 app.get("/api/user", authenticate, authorizeRole("user"), (req, res) => {
   res.json({ message: "User access granted" });
 });
-
-app.use("/api/auth", authRoutes);
 
 const server = http.createServer(app);
 const wss = new Server({ server });
