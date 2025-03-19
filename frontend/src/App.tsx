@@ -1,7 +1,7 @@
 import React from "react";
 import useWebSocket from "./hooks/useWebSocket";
 
-function App() {
+const App: React.FC = () => {
   const messages = useWebSocket("ws://localhost:5000");
 
   return (
@@ -14,6 +14,6 @@ function App() {
       </ul>
     </div>
   );
-}
+};
 
 export default App;
