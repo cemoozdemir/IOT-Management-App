@@ -7,6 +7,13 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import authRoutes from "./routes/auth";
 import { verifyToken } from "./utils/auth";
+import { authenticate, authorizeRole } from "./middleware/authMiddleware";
+import User from "./models/User";
+import sequelize from "./config/database";
+
+sequelize.sync({ force: true }).then(() => {
+  console.log("Database synchronized.");
+});
 
 dotenv.config();
 
@@ -21,12 +28,20 @@ app.use(
   })
 );
 
+app.get("/api/admin", authenticate, authorizeRole("admin"), (req, res) => {
+  res.json({ message: "Admin access granted" });
+});
+
+app.get("/api/user", authenticate, authorizeRole("user"), (req, res) => {
+  res.json({ message: "User access granted" });
+});
+
 app.use("/api/auth", authRoutes);
 
 const server = http.createServer(app);
 const wss = new Server({ server });
 
-wss.on("connection", (ws, req) => {
+wss.on("connection", async (ws, req) => {
   const token = req.url?.split("token=")[1];
 
   if (!token) {
@@ -36,10 +51,17 @@ wss.on("connection", (ws, req) => {
 
   try {
     const decoded = verifyToken(token);
-    console.log(`User ${decoded.id} connected`);
+    const user = await User.findByPk(decoded.id);
+
+    if (!user) {
+      ws.close();
+      return;
+    }
+
+    console.log(`User ${user.id} (${user.role}) connected`);
 
     ws.on("message", (message: string) => {
-      console.log(`Received: ${message}`);
+      console.log(`Received from ${user.role}: ${message}`);
       ws.send(`Echo: ${message}`);
     });
 
@@ -49,5 +71,5 @@ wss.on("connection", (ws, req) => {
   }
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

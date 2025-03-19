@@ -7,6 +7,7 @@ const router: Router = express.Router();
 interface AuthRequestBody {
   email: string;
   password: string;
+  role: string;
 }
 
 // Register Route
@@ -17,10 +18,18 @@ router.post(
     res: Response
   ): Promise<void> => {
     try {
-      const { email, password } = req.body;
+      const { email, password, role } = req.body; // Allow role selection
+      if (!["admin", "user"].includes(role)) {
+        res.status(400).json({ error: "Invalid role" });
+        return;
+      }
+
       const hashedPassword = await hashPassword(password);
-      const user = await User.create({ email, password: hashedPassword });
-      res.status(201).json({ message: "User registered", userId: user.id });
+      const user = await User.create({ email, password: hashedPassword, role });
+
+      res
+        .status(201)
+        .json({ message: "User registered", userId: user.id, role: user.role });
     } catch (err) {
       res.status(400).json({ error: "User already exists" });
     }
