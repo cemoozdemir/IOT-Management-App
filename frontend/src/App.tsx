@@ -1,4 +1,4 @@
-import React, { useContext } from "react";
+import React, { useContext, ReactElement } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -12,9 +12,9 @@ import Dashboard from "./pages/Dashboard";
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({
   children,
-}) => {
+}): ReactElement | null => {
   const auth = useContext(AuthContext);
-  return auth?.token ? children : <Navigate to="/login" />;
+  return auth?.token ? <>{children}</> : <Navigate to="/login" />;
 };
 
 const App: React.FC = () => {
