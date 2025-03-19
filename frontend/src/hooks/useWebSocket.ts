@@ -16,4 +16,4 @@ const useWebSocket = (url: string): string[] => {
   return messages;
 };
 
-export default useWebSocket;
+export { useWebSocket }; // Ensure named export
