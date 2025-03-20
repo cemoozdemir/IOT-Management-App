@@ -54,53 +54,50 @@ const wss = new Server({ server });
 // WebSocket Server: Authenticate + Send Real-Time Sensor Data
 wss.on("connection", async (ws, req) => {
   try {
-    // Securely extract token
+    console.log("🔹 Incoming WebSocket connection request.");
+
     const queryParams = new URLSearchParams(req.url?.split("?")[1]);
     const token = queryParams.get("token");
 
     if (!token) {
-      console.warn("WebSocket connection rejected: No token provided.");
-      ws.close();
+      console.warn("❌ WebSocket rejected: No token.");
+      ws.close(1008, "No token provided");
       return;
     }
 
-    // Verify token
     const decoded = verifyToken(token);
     const user = await User.findByPk(decoded.id);
 
     if (!user) {
-      console.warn("WebSocket connection rejected: User not found.");
-      ws.close();
+      console.warn("❌ WebSocket rejected: User not found.");
+      ws.close(1008, "Invalid user");
       return;
     }
 
-    console.log(`User ${user.id} (${user.role}) connected via WebSocket.`);
+    console.log(`✅ User ${user.id} connected via WebSocket.`);
 
-    // Simulated real-time sensor data (every 2 seconds)
-    const sendSensorData = () => {
-      const sensorData = {
-        temperature: (Math.random() * 10 + 20).toFixed(2), // 20-30°C
-        humidity: (Math.random() * 20 + 40).toFixed(2), // 40-60%
-        timestamp: new Date().toISOString(),
-      };
-      ws.send(JSON.stringify(sensorData));
-    };
-
-    const interval = setInterval(sendSensorData, 2000);
-
-    // Handle incoming messages
     ws.on("message", (message: string) => {
-      console.log(`Received from ${user.role}: ${message}`);
-      ws.send(`Echo: ${message}`);
+      try {
+        const sensorData = JSON.parse(message);
+        console.log("📡 Received Sensor Data:", sensorData);
+
+        // 🔹 Broadcast to all clients
+        wss.clients.forEach((client) => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify(sensorData));
+          }
+        });
+      } catch (error) {
+        console.error("❌ Invalid sensor data:", error);
+      }
     });
 
-    ws.on("close", () => {
-      console.log(`User ${user.id} disconnected.`);
-      clearInterval(interval);
+    ws.on("close", (code, reason) => {
+      console.warn(`⚠️ User disconnected. Code: ${code}, Reason: ${reason}`);
     });
   } catch (err) {
-    console.error("WebSocket authentication failed:", err);
-    ws.close();
+    console.error("❌ WebSocket authentication failed:", err);
+    ws.close(1011, "Internal error");
   }
 });
 

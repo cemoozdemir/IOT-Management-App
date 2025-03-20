@@ -14,7 +14,9 @@ const Dashboard: React.FC = () => {
   const [newDevice, setNewDevice] = useState({ name: "", type: "" });
   const navigate = useNavigate();
   const auth = useContext(AuthContext);
-  const sensorData = useWebSocket("ws://localhost:5000"); // Connect to WebSocket
+
+  // 🔹 Use WebSocket Hook to Receive Live Sensor Data
+  const sensorData = useWebSocket("ws://localhost:3001");
 
   const handleLogout = () => {
     auth?.logout();
@@ -80,7 +82,7 @@ const Dashboard: React.FC = () => {
         <button onClick={handleCreate}>Add Device</button>
       </div>
 
-      <h3>Live Sensor Data</h3>
+      <h3>🔹 Live Sensor Data</h3>
       {sensorData ? (
         <div>
           <p>🌡 Temperature: {sensorData.temperature}°C</p>
