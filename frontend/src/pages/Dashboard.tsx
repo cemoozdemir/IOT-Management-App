@@ -1,6 +1,5 @@
-import { useNavigate } from "react-router-dom";
-
 import React, { useState, useEffect, useContext } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   getDevices,
   createDevice,
@@ -8,12 +7,14 @@ import {
   deleteDevice,
 } from "../api/deviceApi";
 import { AuthContext } from "../context/AuthContext";
+import { useWebSocket } from "../hooks/useWebSocket";
 
 const Dashboard: React.FC = () => {
   const [devices, setDevices] = useState<any[]>([]);
   const [newDevice, setNewDevice] = useState({ name: "", type: "" });
   const navigate = useNavigate();
   const auth = useContext(AuthContext);
+  const sensorData = useWebSocket("ws://localhost:5000"); // Connect to WebSocket
 
   const handleLogout = () => {
     auth?.logout();
@@ -78,6 +79,20 @@ const Dashboard: React.FC = () => {
         />
         <button onClick={handleCreate}>Add Device</button>
       </div>
+
+      <h3>Live Sensor Data</h3>
+      {sensorData ? (
+        <div>
+          <p>🌡 Temperature: {sensorData.temperature}°C</p>
+          <p>💧 Humidity: {sensorData.humidity}%</p>
+          <p>
+            🕒 Last Updated:{" "}
+            {new Date(sensorData.timestamp).toLocaleTimeString()}
+          </p>
+        </div>
+      ) : (
+        <p>Waiting for sensor data...</p>
+      )}
 
       <ul>
         {devices.map((device) => (

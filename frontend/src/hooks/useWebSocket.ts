@@ -1,19 +1,28 @@
 import { useEffect, useState } from "react";
 
-const useWebSocket = (url: string): string[] => {
-  const [messages, setMessages] = useState<string[]>([]);
+interface SensorData {
+  temperature: string;
+  humidity: string;
+  timestamp: string;
+}
+
+const useWebSocket = (url: string): SensorData | null => {
+  const [data, setData] = useState<SensorData | null>(null);
 
   useEffect(() => {
     const socket = new WebSocket(url);
 
     socket.onmessage = (event: MessageEvent) => {
-      setMessages((prev) => [...prev, event.data]);
+      const parsedData = JSON.parse(event.data);
+      setData(parsedData);
     };
+
+    socket.onclose = () => console.log("WebSocket closed");
 
     return () => socket.close();
   }, [url]);
 
-  return messages;
+  return data;
 };
 
-export { useWebSocket }; // Ensure named export
+export { useWebSocket };

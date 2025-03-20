@@ -51,6 +51,7 @@ app.get("/api/user", authenticate, authorizeRole("user"), (req, res) => {
 const server = http.createServer(app);
 const wss = new Server({ server });
 
+// WebSocket Server: Authenticate + Send Real-Time Sensor Data
 wss.on("connection", async (ws, req) => {
   try {
     // Securely extract token
@@ -75,13 +76,28 @@ wss.on("connection", async (ws, req) => {
 
     console.log(`User ${user.id} (${user.role}) connected via WebSocket.`);
 
+    // Simulated real-time sensor data (every 2 seconds)
+    const sendSensorData = () => {
+      const sensorData = {
+        temperature: (Math.random() * 10 + 20).toFixed(2), // 20-30°C
+        humidity: (Math.random() * 20 + 40).toFixed(2), // 40-60%
+        timestamp: new Date().toISOString(),
+      };
+      ws.send(JSON.stringify(sensorData));
+    };
+
+    const interval = setInterval(sendSensorData, 2000);
+
     // Handle incoming messages
     ws.on("message", (message: string) => {
       console.log(`Received from ${user.role}: ${message}`);
       ws.send(`Echo: ${message}`);
     });
 
-    ws.on("close", () => console.log(`User ${user.id} disconnected.`));
+    ws.on("close", () => {
+      console.log(`User ${user.id} disconnected.`);
+      clearInterval(interval);
+    });
   } catch (err) {
     console.error("WebSocket authentication failed:", err);
     ws.close();

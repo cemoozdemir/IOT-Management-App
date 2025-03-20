@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:5001/api/devices";
+const API_URL = "http://localhost:3001/api/devices";
 
 export const getDevices = async () => {
   return axios.get(API_URL);
