@@ -9,7 +9,7 @@ import authRoutes from "./routes/auth";
 import { verifyToken } from "./utils/auth";
 import { authenticate, authorizeRole } from "./middleware/authMiddleware";
 import User from "./models/User";
-import sequelize from "./config/database";
+import sequelize from "../config/database";
 import deviceRoutes from "./routes/device";
 
 // Load environment variables

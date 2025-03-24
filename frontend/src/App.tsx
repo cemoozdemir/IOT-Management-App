@@ -6,7 +6,7 @@ import {
   Navigate,
 } from "react-router-dom";
 import { ThemeProvider } from "styled-components";
-import { lightTheme, darkTheme } from "./theme";
+import { lightTheme, darkTheme } from "./styles/theme";
 import { AuthContext, AuthProvider } from "./context/AuthContext";
 import Dashboard from "./pages/Dashboard";
 import AuthPage from "./pages/AuthPage";
