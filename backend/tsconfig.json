@@ -9,6 +9,6 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*", "src/types", "config/database.ts"],
+  "include": ["src/**/*", "src/types", "src/config/database.ts"],
   "exclude": ["node_modules", "dist"]
 }

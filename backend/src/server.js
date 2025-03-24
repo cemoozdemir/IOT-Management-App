@@ -9,7 +9,7 @@ import authRoutes from "./routes/auth";
 import { verifyToken } from "./utils/auth";
 import { authenticate, authorizeRole } from "./middleware/authMiddleware";
 import User from "./models/User";
-import sequelize from "../config/database";
+import sequelize from "./config/database";
 import deviceRoutes from "./routes/device";
 
 // Load environment variables
@@ -54,8 +54,6 @@ const wss = new Server({ server });
 // WebSocket Server: Authenticate + Send Real-Time Sensor Data
 wss.on("connection", async (ws, req) => {
   try {
-    console.log("🔹 Incoming WebSocket connection request.");
-
     const queryParams = new URLSearchParams(req.url?.split("?")[1]);
     const token = queryParams.get("token");
 
@@ -74,14 +72,10 @@ wss.on("connection", async (ws, req) => {
       return;
     }
 
-    console.log(`✅ User ${user.id} connected via WebSocket.`);
-
     ws.on("message", (message: string) => {
       try {
         const sensorData = JSON.parse(message);
-        console.log("📡 Received Sensor Data:", sensorData);
 
-        // 🔹 Broadcast to all clients
         wss.clients.forEach((client) => {
           if (client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify(sensorData));

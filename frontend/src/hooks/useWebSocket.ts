@@ -38,7 +38,6 @@ const useWebSocket = (url: string): SensorData | null => {
     socketRef.current.onmessage = (event: MessageEvent) => {
       try {
         const parsedData = JSON.parse(event.data);
-        console.log("📡 Received sensor data:", parsedData);
         setData(parsedData);
       } catch (error) {
         console.error("❌ Error parsing WebSocket message:", error);
@@ -51,7 +50,6 @@ const useWebSocket = (url: string): SensorData | null => {
     socketRef.current.onclose = (event) => {
       console.warn("⚠️ WebSocket closed:", event.code, event.reason);
       setTimeout(() => {
-        console.log("🔄 Reconnecting WebSocket...");
         socketRef.current = new WebSocket(wsUrl);
       }, 2000);
     };
