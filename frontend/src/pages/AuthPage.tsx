@@ -1,102 +1,136 @@
+// src/pages/AuthPage.tsx
 import React, { useState, useContext } from "react";
-import styled from "styled-components";
 import { AuthContext } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
-
-const Container = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  background-color: ${(props) => props.theme.mainBg};
-`;
-
-const Box = styled.div`
-  background: ${(props) => props.theme.cardBg};
-  padding: 2rem;
-  border-radius: 12px;
-  width: 100%;
-  max-width: 400px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-`;
-
-const Title = styled.h2`
-  text-align: center;
-  margin-bottom: 1.5rem;
-`;
-
-const ToggleText = styled.p`
-  text-align: center;
-  margin-top: 1rem;
-  font-size: 0.9rem;
-`;
+import {
+  Wrapper,
+  VisualPane,
+  FormPane,
+  FormBox,
+  Title,
+  ToggleText,
+} from "../styles/theme";
 
 const AuthPage: React.FC = () => {
   const auth = useContext(AuthContext);
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
-  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    confirmPassword: "",
+    role: "user",
+  });
+  const [error, setError] = useState("");
 
   if (!auth) return null;
-
   const { login, signup } = auth;
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      if (isLogin) {
-        await login(formData.email, formData.password);
-      } else {
-        await signup(formData.email, formData.password);
+      if (!formData.email || !formData.password) {
+        setError("Email and password are required.");
+        return;
       }
+
+      if (!isLogin) {
+        if (formData.password !== formData.confirmPassword) {
+          setError("Passwords do not match.");
+          return;
+        }
+        await signup(formData.email, formData.password);
+      } else {
+        await login(formData.email, formData.password);
+      }
+
       navigate("/dashboard");
     } catch (err) {
-      console.error("Auth failed:", err);
+      setError("Authentication failed. Please try again.");
     }
   };
 
   return (
-    <Container>
-      <Box>
-        <Title>{isLogin ? "Login" : "Sign Up"}</Title>
-        <form onSubmit={handleSubmit}>
-          <Input
-            type="email"
-            name="email"
-            placeholder="Email"
-            value={formData.email}
-            onChange={handleChange}
-          />
-          <Input
-            type="password"
-            name="password"
-            placeholder="Password"
-            value={formData.password}
-            onChange={handleChange}
-            style={{ marginTop: "1rem" }}
-          />
-          <Button type="submit" style={{ marginTop: "1.5rem", width: "100%" }}>
-            {isLogin ? "Login" : "Sign Up"}
-          </Button>
-        </form>
-        <ToggleText>
-          {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
-          <Button
-            variant="link"
-            onClick={() => setIsLogin((prev) => !prev)}
-            style={{ padding: 0, fontSize: "0.9rem" }}
-          >
-            {isLogin ? "Sign Up" : "Login"}
-          </Button>
-        </ToggleText>
-      </Box>
-    </Container>
+    <Wrapper>
+      <VisualPane>Manage your IoT world, anywhere.</VisualPane>
+      <FormPane>
+        <FormBox>
+          <Title>
+            {isLogin ? "Login to your account" : "Create an account"}
+          </Title>
+          <form onSubmit={handleSubmit}>
+            <Input
+              type="email"
+              name="email"
+              placeholder="Email"
+              value={formData.email}
+              onChange={handleChange}
+              style={{ marginBottom: "1rem" }}
+            />
+            <br />
+            <Input
+              type="password"
+              name="password"
+              placeholder="Password"
+              value={formData.password}
+              onChange={handleChange}
+              style={{ marginBottom: "1rem" }}
+            />
+            {!isLogin && (
+              <Input
+                type="password"
+                name="confirmPassword"
+                placeholder="Confirm Password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                style={{ marginBottom: "1rem" }}
+              />
+            )}
+            {!isLogin && (
+              <select
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+                style={{
+                  width: "100%",
+                  padding: "0.5rem",
+                  borderRadius: "8px",
+                  marginBottom: "1.25rem",
+                }}
+              >
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+              </select>
+            )}
+            {error && (
+              <p style={{ color: "red", fontSize: "0.9rem" }}>{error}</p>
+            )}
+            <Button type="submit" style={{ width: "100%", marginTop: "1rem" }}>
+              {isLogin ? "Login" : "Sign Up"}
+            </Button>
+          </form>
+          <ToggleText>
+            {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
+            <Button
+              variant="link"
+              onClick={() => setIsLogin((prev) => !prev)}
+              style={{ padding: 0, fontSize: "0.9rem" }}
+            >
+              {isLogin ? "Sign Up" : "Login"}
+            </Button>
+          </ToggleText>
+        </FormBox>
+      </FormPane>
+    </Wrapper>
   );
 };
 

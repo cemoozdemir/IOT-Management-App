@@ -1,26 +1,86 @@
 import React from "react";
+import styled, { css } from "styled-components";
+
+type Variant = "default" | "outline" | "destructive" | "link";
+
+interface StyledButtonProps {
+  variant: Variant;
+  disabled?: boolean;
+}
+
+const StyledButton = styled.button<StyledButtonProps>`
+  padding: 0.75rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+
+  ${(props) =>
+    props.variant === "default" &&
+    css`
+      background-color: ${props.theme.buttonBg};
+      color: ${props.theme.buttonText};
+      border: none;
+
+      &:hover {
+        background-color: ${props.theme.buttonHover};
+      }
+    `}
+
+  ${(props) =>
+    props.variant === "outline" &&
+    css`
+      background-color: transparent;
+      border: 2px solid ${props.theme.text};
+      color: ${props.theme.text};
+
+      &:hover {
+        background-color: ${props.theme.hoverBg};
+      }
+    `}
+
+  ${(props) =>
+    props.variant === "destructive" &&
+    css`
+      background-color: transparent;
+      border: 2px solid red;
+      color: red;
+
+      &:hover {
+        background-color: rgba(255, 0, 0, 0.1);
+      }
+    `}
+
+  ${(props) =>
+    props.variant === "link" &&
+    css`
+      background: none;
+      color: ${props.theme.accent};
+      padding: 0;
+      font-size: 0.9rem;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    `}
+
+  ${(props) =>
+    props.disabled &&
+    css`
+      opacity: 0.6;
+      cursor: not-allowed;
+    `}
+`;
 
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "default" | "outline" | "destructive" | "link";
+  variant?: Variant;
 };
 
 export const Button: React.FC<ButtonProps> = ({
   variant = "default",
-  className,
   ...props
 }) => {
-  const base = "px-4 py-2 rounded text-sm font-medium transition";
-  const variants = {
-    default: "bg-blue-600 text-white hover:bg-blue-700",
-    outline: "border border-gray-400 text-gray-700 hover:bg-gray-100",
-    destructive: "bg-red-600 text-white hover:bg-red-700",
-    link: "bg-transparent text-blue-600 underline hover:text-blue-800",
-  };
-
-  return (
-    <button
-      className={`${base} ${variants[variant]} ${className || ""}`}
-      {...props}
-    />
-  );
+  return <StyledButton variant={variant} {...props} />;
 };
