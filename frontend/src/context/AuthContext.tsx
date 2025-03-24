@@ -3,7 +3,8 @@ import axios from "axios";
 
 interface AuthContextType {
   token: string | null;
-  login: (token: string) => void;
+  login: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -16,7 +17,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.getItem("token")
   );
 
-  const login = (newToken: string) => {
+  const login = async (email: string, password: string) => {
+    const response = await axios.post("http://localhost:3001/api/auth/login", {
+      email,
+      password,
+    });
+    const newToken = response.data.token;
+    localStorage.setItem("token", newToken);
+    setToken(newToken);
+  };
+
+  const signup = async (email: string, password: string) => {
+    const response = await axios.post(
+      "http://localhost:3001/api/auth/register",
+      {
+        email,
+        password,
+        role: "user",
+      }
+    );
+    const newToken = response.data.token;
     localStorage.setItem("token", newToken);
     setToken(newToken);
   };
@@ -33,7 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [token]);
 
   return (
-    <AuthContext.Provider value={{ token, login, logout }}>
+    <AuthContext.Provider value={{ token, login, signup, logout }}>
       {children}
     </AuthContext.Provider>
   );
