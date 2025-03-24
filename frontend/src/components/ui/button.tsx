@@ -3,84 +3,84 @@ import styled, { css } from "styled-components";
 
 type Variant = "default" | "outline" | "destructive" | "link";
 
-interface StyledButtonProps {
-  variant: Variant;
-  disabled?: boolean;
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: Variant;
+  loading?: boolean;
 }
 
-const StyledButton = styled.button<StyledButtonProps>`
+const variantStyles = {
+  default: css`
+    background-color: ${(props) => props.theme.buttonBg};
+    color: ${(props) => props.theme.buttonText};
+    border: none;
+
+    &:hover {
+      background-color: ${(props) => props.theme.buttonHover};
+    }
+  `,
+  outline: css`
+    background-color: transparent;
+    border: 2px solid ${(props) => props.theme.text};
+    color: ${(props) => props.theme.text};
+
+    &:hover {
+      background-color: ${(props) => props.theme.hoverBg};
+    }
+  `,
+  destructive: css`
+    background-color: transparent;
+    border: 2px solid #ef4444;
+    color: #ef4444;
+
+    &:hover {
+      background-color: rgba(239, 68, 68, 0.1);
+    }
+  `,
+  link: css`
+    background: none;
+    color: ${(props) => props.theme.accent};
+    padding: 0;
+    font-size: 0.9rem;
+    border: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  `,
+};
+
+const StyledButton = styled.button<ButtonProps>`
+  all: unset;
+  box-sizing: border-box; // Add this line
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%; // ensure 100% width here too
   padding: 0.75rem 1.25rem;
-  font-size: 1rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
   font-weight: 600;
-  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  width: 100%;
+  transition: background 0.2s ease-in-out;
+  ${(props) => variantStyles[props.variant || "default"]};
 
-  ${(props) =>
-    props.variant === "default" &&
-    css`
-      background-color: ${props.theme.buttonBg};
-      color: ${props.theme.buttonText};
-      border: none;
-
-      &:hover {
-        background-color: ${props.theme.buttonHover};
-      }
-    `}
-
-  ${(props) =>
-    props.variant === "outline" &&
-    css`
-      background-color: transparent;
-      border: 2px solid ${props.theme.text};
-      color: ${props.theme.text};
-
-      &:hover {
-        background-color: ${props.theme.hoverBg};
-      }
-    `}
-
-  ${(props) =>
-    props.variant === "destructive" &&
-    css`
-      background-color: transparent;
-      border: 2px solid red;
-      color: red;
-
-      &:hover {
-        background-color: rgba(255, 0, 0, 0.1);
-      }
-    `}
-
-  ${(props) =>
-    props.variant === "link" &&
-    css`
-      background: none;
-      color: ${props.theme.accent};
-      padding: 0;
-      font-size: 0.9rem;
-
-      &:hover {
-        text-decoration: underline;
-      }
-    `}
-
-  ${(props) =>
-    props.disabled &&
-    css`
-      opacity: 0.6;
-      cursor: not-allowed;
-    `}
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 `;
 
-type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: Variant;
-};
-
 export const Button: React.FC<ButtonProps> = ({
-  variant = "default",
+  children,
+  loading,
+  disabled,
   ...props
 }) => {
-  return <StyledButton variant={variant} {...props} />;
+  return (
+    <StyledButton disabled={disabled || loading} {...props}>
+      {loading ? "Loading..." : children}
+    </StyledButton>
+  );
 };
+
+export default Button;
