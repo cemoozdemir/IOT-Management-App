@@ -14,8 +14,8 @@
     "dialect": "postgres"
   },
   "production": {
-    "username": "root",
-    "password": null,
+    "username": "cemozdemir",
+    "password": "123cem123",
     "database": "database_production",
     "host": "127.0.0.1",
     "dialect": "postgres"
