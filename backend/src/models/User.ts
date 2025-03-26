@@ -5,7 +5,7 @@ class User extends Model {
   public id!: string;
   public email!: string;
   public password!: string;
-  public role!: string; // New role field
+  public role!: string;
 }
 
 User.init(
@@ -33,6 +33,8 @@ User.init(
   {
     sequelize,
     modelName: "User",
+    tableName: "Users",
+    timestamps: true,
   }
 );
 

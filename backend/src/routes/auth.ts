@@ -10,54 +10,63 @@ interface AuthRequestBody {
   role: string;
 }
 
-// Register Route
-router.post(
-  "/register",
-  async (
-    req: Request<{}, {}, AuthRequestBody>,
-    res: Response
-  ): Promise<void> => {
-    try {
-      const { email, password, role } = req.body; // Allow role selection
-      if (!["admin", "user"].includes(role)) {
-        res.status(400).json({ error: "Invalid role" });
-        return;
-      }
+// REGISTER
+const registerHandler = async (
+  req: Request<{}, {}, AuthRequestBody>,
+  res: Response
+): Promise<void> => {
+  try {
+    const { email, password, role } = req.body;
 
-      const hashedPassword = await hashPassword(password);
-      const user = await User.create({ email, password: hashedPassword, role });
+    if (!["admin", "user"].includes(role)) {
+      res.status(400).json({ error: "Invalid role" });
+      return;
+    }
 
-      res
-        .status(201)
-        .json({ message: "User registered", userId: user.id, role: user.role });
-    } catch (err) {
+    const existingUser = await User.findOne({ where: { email } });
+    if (existingUser) {
       res.status(400).json({ error: "User already exists" });
+      return;
     }
+
+    const hashedPassword = await hashPassword(password);
+    const user = await User.create({ email, password: hashedPassword, role });
+
+    res.status(201).json({
+      message: "User registered",
+      userId: user.id,
+      role: user.role,
+    });
+  } catch (err) {
+    console.error("❌ Register error (detailed):", JSON.stringify(err, null, 2));
+    res.status(500).json({ error: "Server error" });
   }
-);
+};
 
-// Login Route
-router.post(
-  "/login",
-  async (
-    req: Request<{}, {}, AuthRequestBody>,
-    res: Response
-  ): Promise<void> => {
-    try {
-      const { email, password } = req.body;
-      const user = await User.findOne({ where: { email } });
+// LOGIN
+const loginHandler = async (
+  req: Request<{}, {}, AuthRequestBody>,
+  res: Response
+): Promise<void> => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ where: { email } });
 
-      if (!user || !(await comparePasswords(password, user.password))) {
-        res.status(401).json({ error: "Invalid credentials" });
-        return;
-      }
-
-      const token = generateToken(user.id);
-      res.json({ token });
-    } catch (err) {
-      res.status(500).json({ error: "Server error" });
+    if (!user || !(await comparePasswords(password, user.password))) {
+      res.status(401).json({ error: "Invalid credentials" });
+      return;
     }
+
+    const token = generateToken(user.id);
+    res.json({ token });
+  } catch (err) {
+    console.error("❌ Login error:", err);
+    res.status(500).json({ error: "Server error" });
   }
-);
+};
+
+// Routes
+router.post("/register", registerHandler);
+router.post("/login", loginHandler);
 
 export default router;
