@@ -29,6 +29,7 @@ router.post(
         name,
         type,
         userId: req.user.id,
+        status: "online",
       });
 
       res.status(201).json(newDevice);

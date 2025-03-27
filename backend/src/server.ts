@@ -2,22 +2,24 @@ import express, { Application } from "express";
 import http from "http";
 import WebSocket, { Server } from "ws";
 import dotenv from "dotenv";
-import cors from "cors";  // Eğer cors'u import etmediyseniz, bunu ekleyin
-import helmet from "helmet";  // Eğer helmet'u import etmediyseniz, bunu ekleyin
+import cors from "cors"; // Eğer cors'u import etmediyseniz, bunu ekleyin
+import helmet from "helmet"; // Eğer helmet'u import etmediyseniz, bunu ekleyin
 import sequelize from "./config/database";
 import deviceRoutes from "./routes/device";
+import authRoutes from "./routes/auth"; // Import authRoutes
 
 // Load environment variables
 dotenv.config({
-  path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env', // .env.production veya .env dosyasını yükler
+  path: process.env.NODE_ENV === "production" ? ".env.production" : ".env", // .env.production veya .env dosyasını yükler
 });
 
 const app: Application = express();
 
 // Security middlewares
-const allowedOrigin = process.env.NODE_ENV === 'production' 
-  ? "https://iot.ozdmr.dev" // Prod için frontend URL'si
-  : "http://localhost:3000"; // Lokal için frontend URL'si (React'in varsayılan portu)
+const allowedOrigin =
+  process.env.NODE_ENV === "production"
+    ? "https://iot.ozdmr.dev" // Prod için frontend URL'si
+    : "http://localhost:3000"; // Lokal için frontend URL'si (React'in varsayılan portu)
 
 app.use(
   cors({
@@ -29,15 +31,16 @@ app.use(
 );
 
 // Proxy ayarini açıyoruz
-app.set('trust proxy', true);
+app.set("trust proxy", true);
 
 app.use(helmet());
 app.use(express.json());
 
 // Sync database safely
-sequelize.sync({ force: true }) // Bu kısmı "alter: true" olarak değiştirmek isteyebilirsiniz, prod'da verileri sıfırlamak istemeyebilirsiniz.
+sequelize.sync({ force: true }); // Bu kısmı "alter: true" olarak değiştirmek isteyebilirsiniz, prod'da verileri sıfırlamak istemeyebilirsiniz.
 
 app.use("/api/devices", deviceRoutes);
+app.use("/auth", authRoutes); // route'u aktif hale getir
 
 // Başka route'lar veya middleware'ler de ekleyebilirsiniz
 

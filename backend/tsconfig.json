@@ -1,14 +1,14 @@
 {
   "compilerOptions": {
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "strict": true,
-    "module": "CommonJS",
     "target": "ES6",
+    "module": "CommonJS",
+    "strict": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "baseUrl": "./src"
   },
-  "include": ["src/**/*", "src/types", "src/config/database.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/**/*"]
 }

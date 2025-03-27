@@ -80,6 +80,24 @@ const Dashboard: React.FC<DashboardProps> = ({ toggleTheme }) => {
   const auth = useContext(AuthContext);
   const sensorData = useWebSocket("ws://localhost:3001");
 
+  const generateCustomToken = async (duration: string) => {
+    try {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/auth/token`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${auth?.token}`,
+        },
+        body: JSON.stringify({ duration }),
+      });
+
+      const data = await res.json();
+      alert(`Token: ${data.token}`);
+    } catch (err) {
+      console.error("Token creation failed:", err);
+    }
+  };
+
   const fetchDevices = async () => {
     try {
       const response = await getDevices();
@@ -100,7 +118,7 @@ const Dashboard: React.FC<DashboardProps> = ({ toggleTheme }) => {
 
   const handleCreate = async () => {
     try {
-      await createDevice(newDevice);
+      await createDevice({ ...newDevice, status: "online" });
       setNewDevice({ name: "", type: "" });
       fetchDevices();
     } catch (error) {
@@ -233,6 +251,22 @@ const Dashboard: React.FC<DashboardProps> = ({ toggleTheme }) => {
                   </DeviceItem>
                 ))}
               </DeviceList>
+            </CardContent>
+          </Card>
+        </Section>
+        <Section>
+          <Card>
+            <CardHeader>
+              <CardTitle>Generate Device Token</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div style={{ display: "flex", gap: "1rem" }}>
+                <Button onClick={() => generateCustomToken("30d")}>1 Ay</Button>
+                <Button onClick={() => generateCustomToken("90d")}>3 Ay</Button>
+                <Button onClick={() => generateCustomToken("180d")}>
+                  6 Ay
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </Section>

@@ -1,4 +1,4 @@
-import jwt from "jsonwebtoken";
+import jwt, { SignOptions } from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
 
@@ -18,8 +18,11 @@ export const comparePasswords = async (
   return bcrypt.compare(password, hashed);
 };
 
-export const generateToken = (userId: string): string => {
-  return jwt.sign({ id: userId }, SECRET_KEY, { expiresIn: "1h" });
+export const generateToken = (
+  userId: string,
+  expiresIn: SignOptions["expiresIn"] = "30d"
+) => {
+  return jwt.sign({ id: userId }, SECRET_KEY, { expiresIn });
 };
 
 export const verifyToken = (token: string): any => {

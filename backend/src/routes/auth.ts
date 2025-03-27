@@ -1,6 +1,8 @@
 import express, { Request, Response, Router } from "express";
 import User from "../models/User";
 import { hashPassword, comparePasswords, generateToken } from "../utils/auth";
+import { authenticate } from "../middleware/authMiddleware";
+import { AuthenticatedRequest } from "types/AuthenticatedRequest";
 
 const router: Router = express.Router();
 
@@ -38,7 +40,10 @@ const registerHandler = async (
       role: user.role,
     });
   } catch (err) {
-    console.error("❌ Register error (detailed):", JSON.stringify(err, null, 2));
+    console.error(
+      "❌ Register error (detailed):",
+      JSON.stringify(err, null, 2)
+    );
     res.status(500).json({ error: "Server error" });
   }
 };
@@ -64,6 +69,16 @@ const loginHandler = async (
     res.status(500).json({ error: "Server error" });
   }
 };
+
+router.post(
+  "/token",
+  authenticate,
+  (req: AuthenticatedRequest, res: Response) => {
+    const { duration } = req.body;
+    const token = generateToken(req.user!.id, duration || "30d");
+    res.json({ token });
+  }
+);
 
 // Routes
 router.post("/register", registerHandler);

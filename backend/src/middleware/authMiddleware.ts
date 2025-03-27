@@ -2,13 +2,9 @@ import { Request, Response, NextFunction } from "express";
 import { verifyToken } from "../utils/auth";
 import User from "../models/User";
 
-// Ensure req.user is recognized
-interface AuthRequest extends Request {
-  user?: { id: string; role: "admin" | "user" };
-}
-
+// ✅ 1. Custom tip cast ile `req.user`'a erişim
 export const authenticate = async (
-  req: AuthRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
@@ -20,7 +16,13 @@ export const authenticate = async (
     }
 
     const decoded = verifyToken(token);
-    req.user = { id: decoded.id, role: decoded.role };
+
+    // ❗ Cast ekliyoruz:
+    (req as Request & { user?: { id: string; role: "admin" | "user" } }).user =
+      {
+        id: decoded.id,
+        role: decoded.role,
+      };
 
     next();
   } catch {
@@ -28,22 +30,28 @@ export const authenticate = async (
   }
 };
 
+// ✅ 2. Diğer fonksiyonda da cast ekliyoruz
 export const authorizeRole = (role: "admin" | "user") => {
   return async (
-    req: AuthRequest,
+    req: Request,
     res: Response,
     next: NextFunction
   ): Promise<void> => {
-    if (!req.user) {
+    const typedReq = req as Request & {
+      user?: { id: string; role: "admin" | "user" };
+    };
+
+    if (!typedReq.user) {
       res.status(403).json({ error: "User not authenticated" });
       return;
     }
 
-    const user = await User.findByPk(req.user.id);
+    const user = await User.findByPk(typedReq.user.id);
     if (!user || user.role !== role) {
       res.status(403).json({ error: "Forbidden" });
       return;
     }
+
     next();
   };
 };
