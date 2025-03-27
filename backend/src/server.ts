@@ -7,11 +7,12 @@ import helmet from "helmet"; // Eğer helmet'u import etmediyseniz, bunu ekleyin
 import sequelize from "./config/database";
 import deviceRoutes from "./routes/device";
 import authRoutes from "./routes/auth"; // Import authRoutes
-
+import path from 'path';
 // Load environment variables
-dotenv.config({
-  path: process.env.NODE_ENV === "production" ? ".env.production" : ".env", // .env.production veya .env dosyasını yükler
-});
+
+dotenv.config({ path: path.resolve(__dirname, ".env.production") });
+
+console.log("✅ DB_PASS:", process.env.DB_PASS);
 
 const app: Application = express();
 
@@ -37,7 +38,7 @@ app.use(helmet());
 app.use(express.json());
 
 // Sync database safely
-sequelize.sync({ force: true }); // Bu kısmı "alter: true" olarak değiştirmek isteyebilirsiniz, prod'da verileri sıfırlamak istemeyebilirsiniz.
+sequelize.sync({ alter: true }); // force: true -> alter: true
 
 app.use("/api/devices", deviceRoutes);
 app.use("/auth", authRoutes); // route'u aktif hale getir

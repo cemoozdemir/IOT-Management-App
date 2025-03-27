@@ -1,8 +1,11 @@
 import jwt, { SignOptions } from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
+import path from "path";
 
-dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, ".env.production") });
+
+
 
 const SECRET_KEY = process.env.JWT_SECRET || "default_secret_key";
 

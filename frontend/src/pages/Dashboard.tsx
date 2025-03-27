@@ -78,7 +78,13 @@ const Dashboard: React.FC<DashboardProps> = ({ toggleTheme }) => {
   const [newDevice, setNewDevice] = useState({ name: "", type: "" });
   const navigate = useNavigate();
   const auth = useContext(AuthContext);
-  const sensorData = useWebSocket("ws://localhost:3001");
+  const isProd = process.env.NODE_ENV === 'production';
+
+  const wsUrl = isProd
+    ? 'wss://iot.ozdmr.dev' // Secure WS in production
+    : 'ws://localhost:3001'; // Local dev
+
+  const sensorData = useWebSocket(wsUrl);
 
   const generateCustomToken = async (duration: string) => {
     try {
@@ -101,11 +107,12 @@ const Dashboard: React.FC<DashboardProps> = ({ toggleTheme }) => {
   const fetchDevices = async () => {
     try {
       const response = await getDevices();
-      setDevices(response.data);
+      console.log("Fetched devices:", response.data);
+      setDevices(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error("Error fetching devices:", error);
     }
-  };
+  };  
 
   useEffect(() => {
     fetchDevices();

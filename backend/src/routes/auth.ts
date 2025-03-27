@@ -40,13 +40,11 @@ const registerHandler = async (
       role: user.role,
     });
   } catch (err) {
-    console.error(
-      "❌ Register error (detailed):",
-      JSON.stringify(err, null, 2)
-    );
+    console.error("❌ Register error (detailed):", JSON.stringify(err, null, 2));
     res.status(500).json({ error: "Server error" });
   }
 };
+
 
 // LOGIN
 const loginHandler = async (
