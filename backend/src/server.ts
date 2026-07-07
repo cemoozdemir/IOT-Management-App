@@ -1,18 +1,12 @@
 import express, { Application } from "express";
 import http from "http";
 import WebSocket, { Server } from "ws";
-import dotenv from "dotenv";
 import cors from "cors"; // Eğer cors'u import etmediyseniz, bunu ekleyin
 import helmet from "helmet"; // Eğer helmet'u import etmediyseniz, bunu ekleyin
 import sequelize from "./config/database";
 import deviceRoutes from "./routes/device";
 import authRoutes from "./routes/auth"; // Import authRoutes
-import path from 'path';
-// Load environment variables
-
-dotenv.config({ path: path.resolve(__dirname, ".env.production") });
-
-console.log("✅ DB_PASS:", process.env.DB_PASS);
+import "./config/env";
 
 const app: Application = express();
 
@@ -37,11 +31,19 @@ app.set("trust proxy", true);
 app.use(helmet());
 app.use(express.json());
 
+// health checks
+app.get('/health', (_req, res) => {
+  res.status(200).json({ status: 'ok', service: 'iot-api', time: new Date().toISOString() });
+});
+app.get('/api/health', (_req, res) => {
+  res.status(200).json({ status: 'ok', service: 'iot-api', time: new Date().toISOString() });
+});
+
 // Sync database safely
 sequelize.sync({ alter: true }); // force: true -> alter: true
 
 app.use("/api/devices", deviceRoutes);
-app.use("/auth", authRoutes); // route'u aktif hale getir
+app.use("/api/auth", authRoutes); // route'u aktif hale getir
 
 // Başka route'lar veya middleware'ler de ekleyebilirsiniz
 
@@ -49,7 +51,10 @@ app.use("/auth", authRoutes); // route'u aktif hale getir
 const server = http.createServer(app);
 const wss = new Server({ server });
 
+const PORT = Number(process.env.PORT) || 3001;
+const HOST = process.env.HOST || '127.0.0.1';
+
 // Sunucuyu başlat
-server.listen(process.env.PORT || 3001, () => {
-  console.log(`🚀 Server running on port ${process.env.PORT || 3001}`);
+server.listen(PORT, HOST, () => {
+  console.log(`🚀 Server running on http://${HOST}:${PORT}`);
 });
