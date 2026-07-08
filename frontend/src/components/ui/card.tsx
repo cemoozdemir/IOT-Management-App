@@ -1,18 +1,34 @@
-import React from "react";
+import styled from "styled-components";
 
-export const Card: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="bg-white rounded-xl shadow p-4">{children}</div>
-);
+export const Card = styled.section`
+  min-width: 0;
+  padding: 1.25rem;
+  background: ${(props) => props.theme.surface};
+  border: 1px solid ${(props) => props.theme.border};
+  border-radius: ${(props) => props.theme.radiusMd};
+  box-shadow: ${(props) => props.theme.shadowSm};
+`;
 
-export const CardHeader: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => <div className="mb-2 text-lg font-semibold">{children}</div>;
+export const CardHeader = styled.div`
+  margin-bottom: 1.1rem;
+`;
 
-export const CardTitle: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => <h3 className="text-lg font-bold">{children}</h3>;
+export const CardTitle = styled.h2`
+  margin: 0;
+  color: ${(props) => props.theme.text};
+  font-size: 1rem;
+  line-height: 1.3;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+`;
 
-export const CardContent: React.FC<{
-  children: React.ReactNode;
-  className?: string;
-}> = ({ children, className }) => <div className={className}>{children}</div>;
+export const CardDescription = styled.p`
+  margin: 0.35rem 0 0;
+  color: ${(props) => props.theme.textMuted};
+  font-size: 0.87rem;
+  line-height: 1.5;
+`;
+
+export const CardContent = styled.div`
+  min-width: 0;
+`;

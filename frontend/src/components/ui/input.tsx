@@ -2,27 +2,42 @@ import React from "react";
 import styled from "styled-components";
 
 const StyledInput = styled.input`
-  box-sizing: border-box; // Add this line
+  display: block;
   width: 100%;
-  padding: 0.75rem 1rem;
-  border: 1px solid ${(props) => props.theme.border || "#ccc"};
-  border-radius: 8px;
-  font-size: 1rem;
-  background-color: ${(props) => props.theme.inputBg || "#fff"};
-  color: ${(props) => props.theme.text || "#000"};
-  transition: border-color 0.2s, box-shadow 0.2s;
+  min-height: 44px;
+  padding: 0.68rem 0.85rem;
+  background: ${(props) => props.theme.inputBg};
+  border: 1px solid ${(props) => props.theme.border};
+  border-radius: ${(props) => props.theme.radiusSm};
+  color: ${(props) => props.theme.text};
+  font-size: 0.93rem;
+  line-height: 1.4;
+  transition:
+    border-color ${(props) => props.theme.transition},
+    box-shadow ${(props) => props.theme.transition};
+
+  &::placeholder {
+    color: ${(props) => props.theme.textMuted};
+  }
+
+  &:hover:not(:disabled) {
+    border-color: ${(props) => props.theme.borderStrong};
+  }
 
   &:focus {
     outline: none;
-    border-color: ${(props) => props.theme.accent || "#007BFF"};
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
+    border-color: ${(props) => props.theme.primary};
+    box-shadow: 0 0 0 3px ${(props) => props.theme.focusRing};
   }
 
-  &::placeholder {
-    color: ${(props) => props.theme.muted || "#aaa"};
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 `;
 
-export const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => {
+export const Input = (
+  props: React.InputHTMLAttributes<HTMLInputElement>
+) => {
   return <StyledInput {...props} />;
 };
