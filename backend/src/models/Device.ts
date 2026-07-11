@@ -8,6 +8,7 @@ class Device extends Model {
   public type!: string;
   public status!: string;
   public userId!: string;
+  public lastSeenAt!: Date | null;
 }
 
 Device.init(
@@ -33,6 +34,10 @@ Device.init(
       type: DataTypes.UUID,
       allowNull: false,
       references: { model: User, key: "id" },
+    },
+    lastSeenAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
     },
   },
   {
