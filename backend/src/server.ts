@@ -39,8 +39,7 @@ app.get('/api/health', (_req, res) => {
   res.status(200).json({ status: 'ok', service: 'iot-api', time: new Date().toISOString() });
 });
 
-// Sync database safely
-sequelize.sync({ alter: true }); // force: true -> alter: true
+// Database schema changes are managed exclusively through migrations.
 
 app.use("/api/devices", deviceRoutes);
 app.use("/api/auth", authRoutes); // route'u aktif hale getir
@@ -54,7 +53,19 @@ const wss = new Server({ server });
 const PORT = Number(process.env.PORT) || 3001;
 const HOST = process.env.HOST || '127.0.0.1';
 
-// Sunucuyu başlat
-server.listen(PORT, HOST, () => {
-  console.log(`🚀 Server running on http://${HOST}:${PORT}`);
+const startServer = async (): Promise<void> => {
+  await sequelize.authenticate();
+
+  server.listen(PORT, HOST, () => {
+    console.log(
+      `🚀 Server running on http://${HOST}:${PORT}`
+    );
+  });
+};
+
+void startServer().catch(() => {
+  console.error(
+    "Database connection failed during startup"
+  );
+  process.exit(1);
 });
