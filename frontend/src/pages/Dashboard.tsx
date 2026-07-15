@@ -13,8 +13,11 @@ import {
   getDevices,
   revokeDeviceCredential,
   rotateDeviceCredential,
-  updateDevice,
 } from "../api/deviceApi";
+import {
+  getLatestTelemetry,
+  LatestTelemetryMeasurement,
+} from "../api/telemetryApi";
 import { AppShell } from "../layout/AppShell";
 import { Button } from "../components/ui/button";
 import {
@@ -55,7 +58,14 @@ import {
   StatusBadge,
   StatusDot,
   StatusLine,
+  TelemetryDevice,
+  TelemetryFooter,
+  TelemetryList,
   TelemetryMessage,
+  TelemetryMetric,
+  TelemetryReading,
+  TelemetryRow,
+  TelemetryTimestamp,
   WorkspaceGrid,
 } from "../styles/dashboard";
 
@@ -79,12 +89,76 @@ interface DashboardProps {
   isDarkMode: boolean;
 }
 
+const DASHBOARD_POLL_INTERVAL_MS =
+  10_000;
+
+const formatTimestamp = (
+  value: string
+) => {
+  const date =
+    new Date(value);
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return "Unknown time";
+  }
+
+  return date.toLocaleString();
+};
+
+const formatTelemetryValue = (
+  value: number,
+  unit: string | null
+) => {
+  const formatted =
+    new Intl.NumberFormat(
+      undefined,
+      {
+        maximumFractionDigits:
+          3,
+      }
+    ).format(value);
+
+  return unit
+    ? `${formatted} ${unit}`
+    : formatted;
+};
+
 const Dashboard: React.FC<DashboardProps> = ({
   toggleTheme,
   isDarkMode,
 }) => {
   const [devices, setDevices] =
     useState<Device[]>([]);
+
+  const [
+    telemetry,
+    setTelemetry,
+  ] = useState<
+    LatestTelemetryMeasurement[]
+  >([]);
+
+  const [
+    telemetryError,
+    setTelemetryError,
+  ] = useState<string | null>(
+    null
+  );
+
+  const [
+    telemetryRefreshedAt,
+    setTelemetryRefreshedAt,
+  ] = useState<string | null>(
+    null
+  );
+
+  const [
+    telemetryTruncated,
+    setTelemetryTruncated,
+  ] = useState(false);
 
   const [newDevice, setNewDevice] =
     useState({
@@ -122,31 +196,187 @@ const Dashboard: React.FC<DashboardProps> = ({
   const auth = useContext(AuthContext);
 
   const fetchDevices =
-    useCallback(async () => {
-      setLoading(true);
-      setError(null);
+    useCallback(
+      async (
+        showLoading:
+          boolean = true,
+        surfaceError:
+          boolean = true
+      ) => {
+        if (showLoading) {
+          setLoading(true);
+        }
 
+        if (surfaceError) {
+          setError(null);
+        }
+
+        try {
+          const response =
+            await getDevices();
+
+          setDevices(
+            Array.isArray(
+              response.data
+            )
+              ? response.data
+              : []
+          );
+        } catch {
+          if (surfaceError) {
+            setError(
+              "Devices could not be loaded. Please try again."
+            );
+          }
+        } finally {
+          if (showLoading) {
+            setLoading(false);
+          }
+        }
+      },
+      []
+    );
+
+  const fetchTelemetry =
+    useCallback(async () => {
       try {
         const response =
-          await getDevices();
+          await getLatestTelemetry();
 
-        setDevices(
-          Array.isArray(response.data)
-            ? response.data
+        const data =
+          response.data;
+
+        setTelemetry(
+          Array.isArray(
+            data?.measurements
+          )
+            ? data.measurements
             : []
         );
-      } catch {
-        setError(
-          "Devices could not be loaded. Please try again."
+
+        setTelemetryRefreshedAt(
+          typeof data?.generatedAt ===
+            "string"
+            ? data.generatedAt
+            : null
         );
-      } finally {
-        setLoading(false);
+
+        setTelemetryTruncated(
+          data?.truncated ===
+            true
+        );
+
+        setTelemetryError(
+          null
+        );
+      } catch {
+        setTelemetryError(
+          "Telemetry refresh is temporarily unavailable."
+        );
       }
     }, []);
 
   useEffect(() => {
-    void fetchDevices();
-  }, [fetchDevices]);
+    let cancelled =
+      false;
+
+    let timerId:
+      number |
+      undefined;
+
+    const schedulePoll =
+      () => {
+        timerId =
+          window.setTimeout(
+            () => {
+              void poll();
+            },
+            DASHBOARD_POLL_INTERVAL_MS
+          );
+      };
+
+    const poll =
+      async () => {
+        await Promise.all([
+          fetchDevices(
+            false,
+            false
+          ),
+          fetchTelemetry(),
+        ]);
+
+        if (!cancelled) {
+          schedulePoll();
+        }
+      };
+
+    void (
+      async () => {
+        await Promise.all([
+          fetchDevices(),
+          fetchTelemetry(),
+        ]);
+
+        if (!cancelled) {
+          schedulePoll();
+        }
+      }
+    )();
+
+    return () => {
+      cancelled =
+        true;
+
+      if (
+        timerId !==
+        undefined
+      ) {
+        window.clearTimeout(
+          timerId
+        );
+      }
+    };
+  }, [
+    fetchDevices,
+    fetchTelemetry,
+  ]);
+
+  const deviceNames =
+    useMemo(
+      () =>
+        new Map(
+          devices.map(
+            (device) => [
+              device.id,
+              device.name,
+            ]
+          )
+        ),
+      [devices]
+    );
+
+  const recentTelemetry =
+    useMemo(
+      () =>
+        [...telemetry]
+          .sort(
+            (
+              left,
+              right
+            ) =>
+              Date.parse(
+                right.recordedAt
+              ) -
+              Date.parse(
+                left.recordedAt
+              )
+          )
+          .slice(
+            0,
+            8
+          ),
+      [telemetry]
+    );
 
   const onlineCount = useMemo(
     () =>
@@ -238,37 +468,6 @@ const Dashboard: React.FC<DashboardProps> = ({
       );
     } finally {
       setIsCreating(false);
-    }
-  };
-
-  const handleUpdate = async (
-    device: Device
-  ) => {
-    const nextStatus =
-      device.status === "online"
-        ? "offline"
-        : "online";
-
-    setBusyDeviceId(device.id);
-    setError(null);
-
-    try {
-      await updateDevice(
-        device.id,
-        {
-          name: device.name,
-          type: device.type,
-          status: nextStatus,
-        }
-      );
-
-      await fetchDevices();
-    } catch {
-      setError(
-        "Device status could not be updated."
-      );
-    } finally {
-      setBusyDeviceId(null);
     }
   };
 
@@ -459,6 +658,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       }
 
       await fetchDevices();
+      await fetchTelemetry();
     } catch {
       setError(
         "Device could not be deleted."
@@ -574,7 +774,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             {onlineCount}
           </MetricValue>
           <MetricHint>
-            Currently marked online
+            Seen within the last 2 minutes
           </MetricHint>
         </MetricCard>
 
@@ -586,7 +786,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             {offlineCount}
           </MetricValue>
           <MetricHint>
-            Currently marked offline
+            No recent authenticated telemetry
           </MetricHint>
         </MetricCard>
       </MetricsGrid>
@@ -604,16 +804,98 @@ const Dashboard: React.FC<DashboardProps> = ({
 
           <CardContent>
             <StatusLine>
-              <StatusDot />
-              Telemetry transport not configured
+              <StatusDot
+                $active={
+                  !telemetryError &&
+                  recentTelemetry.length >
+                    0
+                }
+              />
+
+              {telemetryError
+                ? "Telemetry refresh unavailable"
+                : recentTelemetry.length >
+                    0
+                  ? "Authenticated telemetry active"
+                  : "Waiting for device telemetry"}
             </StatusLine>
 
-            <TelemetryMessage>
-              Live sensor data will appear here
-              after a device transport and
-              authenticated telemetry channel are
-              configured.
-            </TelemetryMessage>
+            {telemetryError && (
+              <TelemetryMessage>
+                {telemetryError}
+                {" "}
+                Previously loaded measurements
+                remain visible below.
+              </TelemetryMessage>
+            )}
+
+            {recentTelemetry.length ===
+            0 ? (
+              <TelemetryMessage>
+                No authenticated telemetry has
+                been received yet. Devices can
+                send measurements to the
+                telemetry ingestion endpoint
+                after being configured with their
+                one-time device credential.
+              </TelemetryMessage>
+            ) : (
+              <TelemetryList>
+                {recentTelemetry.map(
+                  (
+                    measurement
+                  ) => (
+                    <TelemetryRow
+                      key={
+                        measurement.id
+                      }
+                    >
+                      <div>
+                        <TelemetryDevice>
+                          {deviceNames.get(
+                            measurement.deviceId
+                          ) ??
+                            "Unknown device"}
+                        </TelemetryDevice>
+
+                        <TelemetryMetric>
+                          {
+                            measurement.metric
+                          }
+                        </TelemetryMetric>
+                      </div>
+
+                      <div>
+                        <TelemetryReading>
+                          {formatTelemetryValue(
+                            measurement.value,
+                            measurement.unit
+                          )}
+                        </TelemetryReading>
+
+                        <TelemetryTimestamp>
+                          {formatTimestamp(
+                            measurement.recordedAt
+                          )}
+                        </TelemetryTimestamp>
+                      </div>
+                    </TelemetryRow>
+                  )
+                )}
+              </TelemetryList>
+            )}
+
+            <TelemetryFooter>
+              Polling every 10 seconds
+              {telemetryRefreshedAt
+                ? ` · Last refresh ${formatTimestamp(
+                    telemetryRefreshedAt
+                  )}`
+                : ""}
+              {telemetryTruncated
+                ? " · Showing the most recent 250 device metrics"
+                : ""}
+            </TelemetryFooter>
           </CardContent>
         </Card>
 
@@ -755,26 +1037,19 @@ const Dashboard: React.FC<DashboardProps> = ({
                           >
                             {device.status}
                           </StatusBadge>
+
+                          {device.lastSeenAt && (
+                            <span>
+                              Last seen{" "}
+                              {formatTimestamp(
+                                device.lastSeenAt
+                              )}
+                            </span>
+                          )}
                         </DeviceMeta>
                       </div>
 
                       <DeviceActions>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={busy}
-                          onClick={() =>
-                            void handleUpdate(
-                              device
-                            )
-                          }
-                        >
-                          {device.status ===
-                          "online"
-                            ? "Set offline"
-                            : "Set online"}
-                        </Button>
-
                         <Button
                           size="sm"
                           variant="outline"
