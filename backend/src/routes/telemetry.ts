@@ -12,6 +12,10 @@ import {
 import {
   authenticateDevice,
 } from "../middleware/deviceAuthMiddleware";
+import {
+  deviceTelemetryRateLimiter,
+  userReadRateLimiter,
+} from "../middleware/rateLimits";
 import Device from "../models/Device";
 import DeviceTelemetry from "../models/DeviceTelemetry";
 import {
@@ -321,6 +325,7 @@ const telemetryMatches = (
 router.get(
   "/latest",
   authenticate,
+  userReadRateLimiter,
   async (
     req: AuthenticatedRequest,
     res: Response,
@@ -402,6 +407,7 @@ router.get(
 router.post(
   "/",
   authenticateDevice,
+  deviceTelemetryRateLimiter,
   async (
     req: DeviceAuthenticatedRequest,
     res: Response,
