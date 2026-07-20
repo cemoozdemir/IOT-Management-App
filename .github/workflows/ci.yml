@@ -62,6 +62,9 @@ jobs:
       - name: Registration security
         run: npm run test:security-registration
 
+      - name: API security hardening
+        run: npm run test:security-hardening
+
       - name: Auth identity
         run: npm run test:auth-identity
 
