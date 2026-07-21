@@ -65,6 +65,9 @@ jobs:
       - name: API security hardening
         run: npm run test:security-hardening
 
+      - name: Deployment safety contract
+        run: npm run test:deploy-safety
+
       - name: Auth identity
         run: npm run test:auth-identity
 
