@@ -907,6 +907,24 @@ rsync \
   "$STAGE/" \
   "$NEW_PROD/"
 
+# The staging tree is created by root under a restrictive umask.
+# Nginx must be able to traverse the live artifact and read the
+# compiled frontend files after the atomic switch.
+chmod \
+  0755 \
+  "$NEW_PROD" \
+  "$NEW_PROD/frontend"
+
+find \
+  "$NEW_PROD/frontend/build" \
+  -type d \
+  -exec chmod 0755 {} +
+
+find \
+  "$NEW_PROD/frontend/build" \
+  -type f \
+  -exec chmod 0644 {} +
+
 install \
   --owner=root \
   --group=root \

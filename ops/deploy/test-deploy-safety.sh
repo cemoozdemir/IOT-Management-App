@@ -279,6 +279,23 @@ jq -r --arg app "iot-api" \
   '.[] | select(.name == $app) | (.pm2_env.NODE_ENV // "")' |
 grep -qx 'production'
 
+#
+# Frontend artifacts served directly by Nginx must remain
+# traversable/readable even when the root deployment runs
+# under a restrictive umask.
+#
+grep -qF \
+  '"$NEW_PROD/frontend/build"' \
+  "$DEPLOY"
+
+grep -qF \
+  '-exec chmod 0755 {} +' \
+  "$DEPLOY"
+
+grep -qF \
+  '-exec chmod 0644 {} +' \
+  "$DEPLOY"
+
 SAFETY_LINE="$(
   grep -n \
     'database-pre-restore-current-' \
