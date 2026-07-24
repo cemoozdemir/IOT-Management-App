@@ -19,6 +19,7 @@ import {
   LatestTelemetryMeasurement,
 } from "../api/telemetryApi";
 import { AppShell } from "../layout/AppShell";
+import CameraSettings from "../components/CameraSettings";
 import { Button } from "../components/ui/button";
 import {
   Card,
@@ -1102,6 +1103,10 @@ const Dashboard: React.FC<DashboardProps> = ({
           )}
         </CardContent>
       </Card>
+
+      <CameraSettings
+        devices={devices}
+      />
     </AppShell>
   );
 };
