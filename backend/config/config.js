@@ -1,20 +1,39 @@
-require('dotenv').config({
-  path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env',
+const dotenv = require("dotenv");
+const path = require("path");
+
+dotenv.config({
+  path: path.resolve(
+    __dirname,
+    "..",
+    ".env.production"
+  ),
 });
+
+const requireEnv = (name) => {
+  const value = process.env[name];
+
+  if (!value || value.trim() === "") {
+    throw new Error(
+      `Missing required environment variable: ${name}`
+    );
+  }
+
+  return value;
+};
+
+const databaseConfig = {
+  username: requireEnv("DB_USER"),
+  password: requireEnv("DB_PASS"),
+  database: requireEnv("DB_NAME"),
+  host: requireEnv("DB_HOST"),
+  dialect: "postgres",
+};
 
 module.exports = {
   development: {
-    username: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME,
-    host: process.env.DB_HOST,
-    dialect: 'postgres',
+    ...databaseConfig,
   },
   production: {
-    username: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME,
-    host: process.env.DB_HOST,
-    dialect: 'postgres',
+    ...databaseConfig,
   },
 };

@@ -1,13 +1,8 @@
 import jwt, { SignOptions } from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-import dotenv from "dotenv";
-import path from "path";
+import { requireEnv } from "../config/env";
 
-dotenv.config({ path: path.resolve(__dirname, ".env.production") });
-
-
-
-const SECRET_KEY = process.env.JWT_SECRET || "default_secret_key";
+const SECRET_KEY = requireEnv("JWT_SECRET");
 
 export const hashPassword = async (password: string): Promise<string> => {
   const salt = await bcrypt.genSalt(10);
