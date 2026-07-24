@@ -10,6 +10,7 @@ import {
   apiRateLimiter,
 } from "./middleware/rateLimits";
 import deviceRoutes from "./routes/device";
+import cameraRoutes from "./routes/camera";
 import telemetryRoutes from "./routes/telemetry";
 import authRoutes from "./routes/auth";
 import "./config/env";
@@ -113,6 +114,11 @@ app.use(
 app.use(
   "/api/devices",
   deviceRoutes
+);
+
+app.use(
+  "/api/cameras",
+  cameraRoutes
 );
 
 app.use(

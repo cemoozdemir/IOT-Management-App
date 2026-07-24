@@ -17,7 +17,8 @@
     "test:telemetry-read-pg": "node --test tests/telemetry-read-postgres.test.js",
     "test:security-hardening": "node --test tests/security-hardening.test.js",
     "test:deploy-safety": "bash ../ops/deploy/test-deploy-safety.sh",
-    "test:camera-source": "node --test tests/camera-source-migration.test.js"
+    "test:camera-source": "node --test tests/camera-source-migration.test.js",
+    "test:camera-settings": "node --test tests/camera-source-settings.test.js"
   },
   "keywords": [],
   "author": "",
