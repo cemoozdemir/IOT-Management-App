@@ -4,7 +4,6 @@ import { AuthContext } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
-import { Select } from "../components/ui/select";
 import {
   Wrapper,
   VisualPane,
@@ -22,7 +21,6 @@ const AuthPage: React.FC = () => {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "user",
   });
   const [error, setError] = useState("");
 
@@ -95,12 +93,6 @@ const AuthPage: React.FC = () => {
                 onChange={handleChange}
                 style={{ marginBottom: "1rem" }}
               />
-            )}
-            {!isLogin && (
-              <Select name="role" value={formData.role} onChange={handleChange}>
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
-              </Select>
             )}
             {error && (
               <p style={{ color: "red", fontSize: "0.9rem" }}>{error}</p>

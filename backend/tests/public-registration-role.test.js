@@ -11,6 +11,9 @@ const User = require("../dist/models/User.js").default;
 const {
   registerHandler,
 } = require("../dist/routes/auth.js");
+const {
+  verifyToken,
+} = require("../dist/utils/auth.js");
 
 test(
   "public registration always creates a user role",
@@ -73,6 +76,20 @@ test(
 
         assert.equal(statusCode, 201);
         assert.equal(responseBody.role, "user");
+        assert.equal(
+          typeof responseBody.token,
+          "string"
+        );
+        assert.ok(responseBody.token.length > 0);
+
+        const decoded = verifyToken(
+          responseBody.token
+        );
+
+        assert.equal(
+          decoded.id,
+          `test-${createdRecords.length}`
+        );
       }
 
       assert.equal(createdRecords.length, 3);
