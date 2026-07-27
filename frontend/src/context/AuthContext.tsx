@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../api/config";
 
 interface AuthContextType {
   token: string | null;
@@ -18,8 +19,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const login = async (email: string, password: string) => {
-    const url = `${process.env.REACT_APP_API_URL}/auth/login`;
-    console.log("Login request URL:", url); // URL'yi konsola yazdır
+    const url = `${API_BASE_URL}/auth/login`;
 
     try {
       const response = await axios.post(url, {
@@ -43,8 +43,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const signup = async (email: string, password: string) => {
-    const url = `${process.env.REACT_APP_API_URL}/auth/register`;
-    console.log("Signup request URL:", url); // URL'yi konsola yazdır
+    const url = `${API_BASE_URL}/auth/register`;
 
     try {
       const response = await axios.post(url, {
@@ -73,7 +72,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   useEffect(() => {
-    console.log("Current API URL:", process.env.REACT_APP_API_URL); // .env.production'dan API URL'sini kontrol et
     axios.defaults.headers.common["Authorization"] = token
       ? `Bearer ${token}`
       : "";
