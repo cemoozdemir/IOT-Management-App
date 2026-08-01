@@ -1,0 +1,149 @@
+###############################################
+# IoT Manager media gateway
+#
+# Camera paths are not stored in this file.
+# The backend reconciles enabled CameraSources
+# through the localhost MediaMTX Control API.
+
+logLevel: info
+logDestinations: [stdout]
+logStructured: true
+
+readTimeout: 10s
+writeTimeout: 10s
+writeQueueSize: 512
+udpMaxPayloadSize: 1452
+
+###############################################
+# Authentication
+#
+# Browser read requests are authorized by the
+# IoT Manager backend. Administrative API calls
+# remain localhost-only and are excluded from
+# external HTTP authentication.
+
+authMethod: http
+
+authHTTPAddress: http://127.0.0.1:3001/api/media/auth
+
+authHTTPExclude:
+  - action: api
+  - action: metrics
+  - action: pprof
+
+###############################################
+# Control API
+#
+# Never expose this listener publicly.
+
+api: true
+apiAddress: 127.0.0.1:9997
+apiEncryption: false
+apiAllowOrigins: []
+
+###############################################
+# Unused administrative services
+
+metrics: false
+pprof: false
+playback: false
+
+###############################################
+# RTSP
+#
+# MediaMTX primarily acts as an RTSP client for
+# cameras. The local listener is retained for
+# diagnostics and future internal media flows,
+# but is never exposed publicly.
+
+rtsp: true
+rtspTransports: [tcp]
+rtspEncryption: "no"
+rtspAddress: 127.0.0.1:8554
+
+###############################################
+# Unused ingest protocols
+
+rtmp: false
+srt: false
+moq: false
+
+###############################################
+# HLS fallback
+#
+# TLS terminates at Nginx.
+
+hls: true
+hlsAddress: 127.0.0.1:8888
+hlsEncryption: false
+hlsAllowOrigins:
+  - https://iot.ozdmr.dev
+
+hlsAlwaysRemux: false
+hlsVariant: fmp4
+hlsSegmentCount: 5
+hlsSegmentDuration: 1s
+hlsPartDuration: 200ms
+hlsSegmentMaxSize: 50M
+hlsDirectory: ""
+
+###############################################
+# WebRTC
+#
+# HTTP/WHEP signaling stays behind Nginx.
+# ICE UDP is the only media listener intended
+# to become externally reachable.
+
+webrtc: true
+webrtcAddress: 127.0.0.1:8889
+webrtcEncryption: false
+
+webrtcAllowOrigins:
+  - https://iot.ozdmr.dev
+
+webrtcTrustedProxies:
+  - 127.0.0.1
+  - ::1
+
+webrtcLocalUDPAddress: :8189
+webrtcLocalTCPAddress: ""
+
+webrtcIPsFromInterfaces: true
+webrtcIPsFromInterfacesList: []
+
+# Production can override this with:
+#
+# MTX_WEBRTCADDITIONALHOSTS=iot.ozdmr.dev
+#
+webrtcAdditionalHosts: []
+
+webrtcICEServers2: []
+
+webrtcSTUNGatherTimeout: 5s
+webrtcHandshakeTimeout: 10s
+webrtcTrackGatherTimeout: 2s
+
+###############################################
+# Camera path defaults
+#
+# Camera connections are opened only when a
+# viewer requests the stream.
+
+pathDefaults:
+  source: publisher
+
+  sourceOnDemand: true
+  sourceOnDemandStartTimeout: 10s
+  sourceOnDemandCloseAfter: 15s
+
+  maxReaders: 4
+
+  record: false
+
+###############################################
+# Dynamic paths
+#
+# Camera paths are added by the backend through
+# /v3/config/paths/* on 127.0.0.1:9997.
+
+paths: {}
