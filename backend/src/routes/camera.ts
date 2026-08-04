@@ -1,3 +1,8 @@
+import {
+  CameraConnectivityProbeResult,
+  CameraConnectivityProbeTarget,
+  probeCameraConnectivity,
+} from "../services/cameraConnectivityProbe";
 import express, {
   NextFunction,
   Response,
@@ -392,6 +397,91 @@ export const serializeCameraSource =
     };
   };
 
+type CameraConnectivityProbe =
+  (
+    target:
+      CameraConnectivityProbeTarget
+  ) => Promise<
+    CameraConnectivityProbeResult
+  >;
+
+export class CameraConnectivityDiagnosticError
+  extends Error {
+  public readonly code:
+    "camera_disabled";
+
+  constructor(
+    code:
+      "camera_disabled"
+  ) {
+    super(
+      code ===
+        "camera_disabled"
+        ? "Camera is disabled"
+        : "Camera diagnostic failed"
+    );
+
+    this.name =
+      "CameraConnectivityDiagnosticError";
+
+    this.code =
+      code;
+  }
+}
+
+export const diagnoseCameraConnectivity =
+  async (
+    camera:
+      Pick<
+        CameraSource,
+        | "enabled"
+        | "sourceHost"
+        | "sourcePort"
+      >,
+    probe:
+      CameraConnectivityProbe =
+        probeCameraConnectivity
+  ): Promise<
+    CameraConnectivityProbeResult
+  > => {
+    if (!camera.enabled) {
+      throw new CameraConnectivityDiagnosticError(
+        "camera_disabled"
+      );
+    }
+
+    /*
+     * Deliberately pass only the transport endpoint.
+     * Protected camera credentials, source path and
+     * query data must never enter the TCP probe.
+     */
+    return probe({
+      host:
+        camera.sourceHost,
+      port:
+        camera.sourcePort,
+    });
+  };
+
+export const serializeCameraConnectivityDiagnostic =
+  (
+    cameraId: string,
+    result:
+      CameraConnectivityProbeResult
+  ) => {
+    return {
+      cameraId,
+      connectivity: {
+        reachable:
+          result.reachable,
+        status:
+          result.status,
+        elapsedMs:
+          result.elapsedMs,
+      },
+    };
+  };
+
 const findOwnedDevice =
   async (
     deviceId: string,
@@ -754,6 +844,73 @@ router.put(
           res
         )
       ) {
+        return;
+      }
+
+      next(error);
+    }
+  }
+);
+
+router.post(
+  "/:id/diagnostics/connectivity",
+  authenticate,
+  userMutationRateLimiter,
+  async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    if (!req.user) {
+      res.status(403).json({
+        error:
+          "User not authenticated",
+      });
+      return;
+    }
+
+    try {
+      /*
+       * Ownership is resolved before any network
+       * operation. A user cannot diagnose another
+       * user's stored camera.
+       */
+      const camera =
+        await findOwnedCamera(
+          req.params.id,
+          req.user.id
+        );
+
+      if (!camera) {
+        res.status(404).json({
+          error:
+            "Camera not found",
+        });
+        return;
+      }
+
+      const result =
+        await diagnoseCameraConnectivity(
+          camera
+        );
+
+      res.json(
+        serializeCameraConnectivityDiagnostic(
+          camera.id,
+          result
+        )
+      );
+    } catch (error) {
+      if (
+        error instanceof
+          CameraConnectivityDiagnosticError &&
+        error.code ===
+          "camera_disabled"
+      ) {
+        res.status(409).json({
+          error:
+            "Camera is disabled",
+        });
         return;
       }
 
