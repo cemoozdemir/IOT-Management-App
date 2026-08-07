@@ -1,4 +1,7 @@
 import {
+  applyCameraConnectionHealth,
+} from "../services/cameraConnectionHealth";
+import {
   CameraConnectivityProbeResult,
   CameraConnectivityProbeTarget,
   probeCameraConnectivity,
@@ -893,6 +896,11 @@ router.post(
         await diagnoseCameraConnectivity(
           camera
         );
+
+      await applyCameraConnectionHealth(
+        camera,
+        result
+      );
 
       res.json(
         serializeCameraConnectivityDiagnostic(
