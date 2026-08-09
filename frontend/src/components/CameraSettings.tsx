@@ -1,3 +1,6 @@
+import {
+  getCameraConnectionView,
+} from "../utils/cameraConnectionStatus";
 import React, {
   useCallback,
   useEffect,
@@ -9,6 +12,7 @@ import {
   createCamera,
   deleteCamera,
   getCameras,
+  testCameraConnectivity,
   updateCamera,
 } from "../api/cameraApi";
 import {
@@ -35,6 +39,7 @@ import {
   CameraActions,
   CameraBadge,
   CameraCheckbox,
+  CameraConnectionBadge,
   CameraEditActions,
   CameraEditPanel,
   CameraError,
@@ -94,6 +99,24 @@ const cameraSourceLabel =
     );
   };
 
+const formatCameraConnectionTimestamp =
+  (
+    value: string
+  ): string => {
+    const date =
+      new Date(value);
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      return "Unknown time";
+    }
+
+    return date.toLocaleString();
+  };
+
 const CameraSettings:
   React.FC<
     CameraSettingsProps
@@ -147,6 +170,13 @@ const CameraSettings:
     const [
       busyCameraId,
       setBusyCameraId,
+    ] = useState<
+      string | null
+    >(null);
+
+    const [
+      testingCameraId,
+      setTestingCameraId,
     ] = useState<
       string | null
     >(null);
@@ -396,6 +426,45 @@ const CameraSettings:
           );
         } finally {
           setBusyCameraId(
+            null
+          );
+        }
+      };
+
+    const handleConnectivityTest =
+      async (
+        camera:
+          CameraRecord
+      ) => {
+        if (!camera.enabled) {
+          return;
+        }
+
+        setTestingCameraId(
+          camera.id
+        );
+
+        setError(null);
+
+        try {
+          await testCameraConnectivity(
+            camera.id
+          );
+
+          /*
+           * Backend persists lastConnectedAt /
+           * lastError. Refresh the canonical
+           * camera representation afterwards.
+           */
+          await loadCameras(
+            false
+          );
+        } catch {
+          setError(
+            "Camera connectivity test could not be completed."
+          );
+        } finally {
+          setTestingCameraId(
             null
           );
         }
@@ -734,10 +803,55 @@ const CameraSettings:
                               camera.streamPath
                             }
                           </CameraStreamPath>
+                          <CameraConnectionBadge
+                            $state={
+                              getCameraConnectionView(
+                                camera
+                              ).state
+                            }
+                          >
+                            {
+                              getCameraConnectionView(
+                                camera
+                              ).label
+                            }
+                          </CameraConnectionBadge>
+
+                          {camera.lastConnectedAt ? (
+                            <span>
+                              Last connected{" "}
+                              {
+                                formatCameraConnectionTimestamp(
+                                  camera.lastConnectedAt
+                                )
+                              }
+                            </span>
+                          ) : null}
+
                         </CameraMeta>
                       </div>
 
                       <CameraActions>
+                        <Button
+                          type="button"
+                          disabled={
+                            !camera.enabled ||
+                            busyCameraId ===
+                              camera.id ||
+                            testingCameraId ===
+                              camera.id
+                          }
+                          onClick={() => {
+                            void handleConnectivityTest(
+                              camera
+                            );
+                          }}
+                        >
+                          {testingCameraId ===
+                          camera.id
+                            ? "Testing..."
+                            : "Test connection"}
+                        </Button>
                         <Button
                           type="button"
                           size="sm"

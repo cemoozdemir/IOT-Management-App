@@ -244,3 +244,46 @@ export const CameraStreamPath =
         props.theme.textMuted};
     font-size: 0.68rem;
   `;
+
+export const CameraConnectionBadge =
+  styled.span<{
+    $state:
+      | "connected"
+      | "error"
+      | "disabled"
+      | "untested";
+  }>`
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.45rem;
+    border-radius: 999px;
+
+    background:
+      ${(props) =>
+        props.$state ===
+        "connected"
+          ? props.theme
+              .successSoft
+          : props.$state ===
+              "error"
+            ? props.theme
+                .dangerSoft
+            : props.theme
+                .hoverBg};
+
+    color:
+      ${(props) =>
+        props.$state ===
+        "connected"
+          ? props.theme
+              .success
+          : props.$state ===
+              "error"
+            ? props.theme
+                .danger
+            : props.theme
+                .textMuted};
+
+    font-size: 0.68rem;
+    font-weight: 700;
+  `;

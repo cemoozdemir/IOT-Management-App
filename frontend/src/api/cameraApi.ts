@@ -50,6 +50,27 @@ export interface UpdateCameraInput {
   enabled?: boolean;
 }
 
+export type CameraConnectivityStatus =
+  | "connected"
+  | "timeout"
+  | "dns_error"
+  | "connection_refused"
+  | "network_unreachable"
+  | "connection_error";
+
+export interface CameraConnectivityDiagnostic {
+  cameraId: string;
+
+  connectivity: {
+    reachable: boolean;
+
+    status:
+      CameraConnectivityStatus;
+
+    elapsedMs: number;
+  };
+}
+
 export const getCameras =
   async () => {
     return axios.get<
@@ -83,6 +104,17 @@ export const updateCamera =
     >(
       `${CAMERA_API_URL}/${id}`,
       input
+    );
+  };
+
+export const testCameraConnectivity =
+  async (
+    id: string
+  ) => {
+    return axios.post<
+      CameraConnectivityDiagnostic
+    >(
+      `${CAMERA_API_URL}/${id}/diagnostics/connectivity`
     );
   };
 
