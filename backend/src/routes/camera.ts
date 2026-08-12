@@ -1,5 +1,10 @@
 import {
+  getCameraMediaReadiness,
+  serializeCameraMediaReadiness,
+} from "../services/cameraMediaReadiness";
+import {
   applyCameraConnectionHealth,
+  resetCameraConnectionHealth,
 } from "../services/cameraConnectionHealth";
 import {
   CameraConnectivityProbeResult,
@@ -829,6 +834,11 @@ router.put(
               .sourceUrl
           )
         );
+
+        Object.assign(
+          updates,
+          resetCameraConnectionHealth()
+        );
       }
 
       await camera.update(
@@ -850,6 +860,65 @@ router.put(
         return;
       }
 
+      next(error);
+    }
+  }
+);
+
+router.get(
+  "/:id/media/readiness",
+  authenticate,
+  userReadRateLimiter,
+  async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    if (!req.user) {
+      res.status(403).json({
+        error:
+          "User not authenticated",
+      });
+
+      return;
+    }
+
+    try {
+      const camera =
+        await findOwnedCamera(
+          req.params.id,
+          req.user.id
+        );
+
+      if (!camera) {
+        res.status(404).json({
+          error:
+            "Camera not found",
+        });
+
+        return;
+      }
+
+      const readiness =
+        getCameraMediaReadiness({
+          enabled:
+            camera.enabled,
+
+          lastConnectedAt:
+            camera.lastConnectedAt,
+
+          lastError:
+            camera.lastError,
+        });
+
+      res.json(
+        serializeCameraMediaReadiness(
+          camera.id,
+          camera.streamPath,
+          readiness
+        )
+      );
+    } catch (error) {
       next(error);
     }
   }

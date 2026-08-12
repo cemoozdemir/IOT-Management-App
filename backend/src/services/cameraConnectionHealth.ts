@@ -5,7 +5,8 @@ import type {
 
 export interface CameraConnectionHealthUpdate {
   lastConnectedAt?:
-    Date;
+    | Date
+    | null;
 
   lastError:
     CameraConnectivityStatus
@@ -48,6 +49,22 @@ export const buildCameraConnectionHealthUpdate =
     return {
       lastError:
         result.status,
+    };
+  };
+
+export const resetCameraConnectionHealth =
+  (): CameraConnectionHealthUpdate => {
+    /*
+     * A connectivity result belongs to one
+     * specific source endpoint. Replacing that
+     * endpoint invalidates the previous health.
+     */
+    return {
+      lastConnectedAt:
+        null,
+
+      lastError:
+        null,
     };
   };
 
