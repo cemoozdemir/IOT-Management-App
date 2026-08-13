@@ -11,6 +11,8 @@ import {
   createDevice,
   deleteDevice,
   getDevices,
+  revokeDeviceCredential,
+  rotateDeviceCredential,
   updateDevice,
 } from "../api/deviceApi";
 import { AppShell } from "../layout/AppShell";
@@ -25,6 +27,15 @@ import {
 import { Input } from "../components/ui/input";
 import {
   CountBadge,
+  CredentialCodeRow,
+  CredentialDescription,
+  CredentialEyebrow,
+  CredentialHeader,
+  CredentialNotice,
+  CredentialNoticeBody,
+  CredentialTitle,
+  CredentialValue,
+  CredentialWarning,
   DeviceActions,
   DeviceForm,
   DeviceList,
@@ -53,6 +64,14 @@ interface Device {
   name: string;
   type: string;
   status: "online" | "offline";
+  lastSeenAt?: string | null;
+}
+
+interface OneTimeCredential {
+  deviceId: string;
+  deviceName: string;
+  value: string;
+  source: "created" | "rotated";
 }
 
 interface DashboardProps {
@@ -86,6 +105,18 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   const [error, setError] =
     useState<string | null>(null);
+
+  const [
+    oneTimeCredential,
+    setOneTimeCredential,
+  ] = useState<OneTimeCredential | null>(
+    null
+  );
+
+  const [
+    credentialCopied,
+    setCredentialCopied,
+  ] = useState(false);
 
   const navigate = useNavigate();
   const auth = useContext(AuthContext);
@@ -139,6 +170,13 @@ const Dashboard: React.FC<DashboardProps> = ({
   ) => {
     event.preventDefault();
 
+    if (oneTimeCredential) {
+      setError(
+        "Save or dismiss the current device credential before creating another device."
+      );
+      return;
+    }
+
     const name =
       newDevice.name.trim();
 
@@ -156,11 +194,37 @@ const Dashboard: React.FC<DashboardProps> = ({
     setError(null);
 
     try {
-      await createDevice({
-        name,
-        type,
-        status: "online",
+      const response =
+        await createDevice({
+          name,
+          type,
+        });
+
+      const issued =
+        response.data?.credential;
+
+      const device =
+        response.data?.device;
+
+      if (
+        !device?.id ||
+        typeof issued?.value !== "string" ||
+        !issued.value ||
+        issued.shownOnce !== true
+      ) {
+        throw new Error(
+          "Invalid device credential response"
+        );
+      }
+
+      setOneTimeCredential({
+        deviceId: device.id,
+        deviceName: device.name,
+        value: issued.value,
+        source: "created",
       });
+
+      setCredentialCopied(false);
 
       setNewDevice({
         name: "",
@@ -208,6 +272,167 @@ const Dashboard: React.FC<DashboardProps> = ({
     }
   };
 
+  const copyCredential = async () => {
+    if (!oneTimeCredential) {
+      return;
+    }
+
+    try {
+      if (
+        navigator.clipboard &&
+        typeof navigator.clipboard.writeText ===
+          "function"
+      ) {
+        await navigator.clipboard.writeText(
+          oneTimeCredential.value
+        );
+      } else {
+        const textarea =
+          document.createElement("textarea");
+
+        textarea.value =
+          oneTimeCredential.value;
+
+        textarea.setAttribute(
+          "readonly",
+          ""
+        );
+
+        textarea.style.position =
+          "fixed";
+
+        textarea.style.opacity =
+          "0";
+
+        document.body.appendChild(
+          textarea
+        );
+
+        textarea.select();
+
+        const copied =
+          document.execCommand("copy");
+
+        document.body.removeChild(
+          textarea
+        );
+
+        if (!copied) {
+          throw new Error(
+            "Clipboard copy failed"
+          );
+        }
+      }
+
+      setCredentialCopied(true);
+      setError(null);
+    } catch {
+      setCredentialCopied(false);
+
+      setError(
+        "Credential could not be copied. Select the value and copy it manually."
+      );
+    }
+  };
+
+  const dismissCredential = () => {
+    setOneTimeCredential(null);
+    setCredentialCopied(false);
+  };
+
+  const handleRotateCredential = async (
+    device: Device
+  ) => {
+    if (oneTimeCredential) {
+      setError(
+        "Save or dismiss the current device credential before rotating another credential."
+      );
+      return;
+    }
+
+    const confirmed =
+      window.confirm(
+        `Rotate the credential for "${device.name}"? The existing device credential will stop working immediately.`
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setBusyDeviceId(device.id);
+    setError(null);
+
+    try {
+      const response =
+        await rotateDeviceCredential(
+          device.id
+        );
+
+      const issued =
+        response.data?.credential;
+
+      if (
+        typeof issued?.value !== "string" ||
+        !issued.value ||
+        issued.shownOnce !== true
+      ) {
+        throw new Error(
+          "Invalid credential rotation response"
+        );
+      }
+
+      setOneTimeCredential({
+        deviceId: device.id,
+        deviceName: device.name,
+        value: issued.value,
+        source: "rotated",
+      });
+
+      setCredentialCopied(false);
+    } catch {
+      setError(
+        "Device credential could not be rotated."
+      );
+    } finally {
+      setBusyDeviceId(null);
+    }
+  };
+
+  const handleRevokeCredential = async (
+    device: Device
+  ) => {
+    const confirmed =
+      window.confirm(
+        `Revoke the active credential for "${device.name}"? The physical device will no longer be able to authenticate until a new credential is issued.`
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setBusyDeviceId(device.id);
+    setError(null);
+
+    try {
+      await revokeDeviceCredential(
+        device.id
+      );
+
+      if (
+        oneTimeCredential?.deviceId ===
+        device.id
+      ) {
+        dismissCredential();
+      }
+    } catch {
+      setError(
+        "Device credential could not be revoked."
+      );
+    } finally {
+      setBusyDeviceId(null);
+    }
+  };
+
   const handleDelete = async (
     device: Device
   ) => {
@@ -225,6 +450,14 @@ const Dashboard: React.FC<DashboardProps> = ({
 
     try {
       await deleteDevice(device.id);
+
+      if (
+        oneTimeCredential?.deviceId ===
+        device.id
+      ) {
+        dismissCredential();
+      }
+
       await fetchDevices();
     } catch {
       setError(
@@ -250,6 +483,74 @@ const Dashboard: React.FC<DashboardProps> = ({
         >
           {error}
         </ErrorBanner>
+      )}
+
+      {oneTimeCredential && (
+        <CredentialNotice
+          role="status"
+          aria-live="polite"
+        >
+          <CredentialNoticeBody>
+            <CredentialHeader>
+              <div>
+                <CredentialEyebrow>
+                  {oneTimeCredential.source ===
+                  "created"
+                    ? "Device created"
+                    : "Credential rotated"}
+                </CredentialEyebrow>
+
+                <CredentialTitle>
+                  Save the credential for{" "}
+                  {oneTimeCredential.deviceName}
+                </CredentialTitle>
+
+                <CredentialDescription>
+                  This credential is shown only
+                  once. Copy it to the physical
+                  device configuration before
+                  dismissing this panel. It cannot
+                  be retrieved again later.
+                </CredentialDescription>
+              </div>
+
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={dismissCredential}
+              >
+                Dismiss
+              </Button>
+            </CredentialHeader>
+
+            <CredentialCodeRow>
+              <CredentialValue
+                aria-label="Device credential"
+              >
+                {oneTimeCredential.value}
+              </CredentialValue>
+
+              <Button
+                type="button"
+                onClick={() =>
+                  void copyCredential()
+                }
+              >
+                {credentialCopied
+                  ? "Copied"
+                  : "Copy credential"}
+              </Button>
+            </CredentialCodeRow>
+
+            <CredentialWarning>
+              Dismissing or refreshing the page
+              permanently removes this raw
+              credential from the interface.
+              The server stores only a
+              non-reversible hash.
+            </CredentialWarning>
+          </CredentialNoticeBody>
+        </CredentialNotice>
       )}
 
       <MetricsGrid>
@@ -380,6 +681,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 type="submit"
                 loading={isCreating}
                 disabled={
+                  Boolean(oneTimeCredential) ||
                   !newDevice.name.trim() ||
                   !newDevice.type.trim()
                 }
@@ -471,6 +773,37 @@ const Dashboard: React.FC<DashboardProps> = ({
                           "online"
                             ? "Set offline"
                             : "Set online"}
+                        </Button>
+
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={
+                            busy ||
+                            Boolean(
+                              oneTimeCredential
+                            )
+                          }
+                          onClick={() =>
+                            void handleRotateCredential(
+                              device
+                            )
+                          }
+                        >
+                          Rotate credential
+                        </Button>
+
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={busy}
+                          onClick={() =>
+                            void handleRevokeCredential(
+                              device
+                            )
+                          }
+                        >
+                          Revoke credential
                         </Button>
 
                         <Button
