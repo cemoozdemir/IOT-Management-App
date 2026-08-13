@@ -1,119 +1,514 @@
-// src/pages/AuthPage.tsx
-import React, { useState, useContext } from "react";
-import { AuthContext } from "../context/AuthContext";
+import React, {
+  useContext,
+  useState,
+} from "react";
+import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { Input } from "../components/ui/input";
+import { AuthContext } from "../context/AuthContext";
 import { Button } from "../components/ui/button";
 import {
-  Wrapper,
-  VisualPane,
-  FormPane,
-  FormBox,
-  Title,
-  ToggleText,
-} from "../styles/theme";
+  AuthCard,
+  AuthForm,
+  AuthInput,
+  AuthShell,
+  BrandMark,
+  BrandText,
+  ErrorMessage,
+  FeatureItem,
+  FeatureList,
+  Field,
+  FormContainer,
+  FormDescription,
+  FormEyebrow,
+  FormRegion,
+  FormTitle,
+  HeroBrand,
+  HeroContent,
+  HeroDescription,
+  HeroEyebrow,
+  HeroFooter,
+  HeroPane,
+  HeroTitle,
+  Label,
+  MobileBrand,
+  ModeSwitch,
+  PasswordField,
+  PasswordInput,
+  PasswordToggle,
+  SecurityNote,
+} from "../styles/auth";
+
+interface FormData {
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
+const getAuthenticationErrorMessage = (
+  error: unknown,
+  isLogin: boolean
+): string => {
+  if (axios.isAxiosError(error)) {
+    const status =
+      error.response?.status;
+
+    if (isLogin && status === 401) {
+      return "Email or password is incorrect.";
+    }
+
+    if (!isLogin && status === 400) {
+      return "An account with this email already exists.";
+    }
+
+    if (
+      typeof status === "number" &&
+      status >= 500
+    ) {
+      return "Authentication service is temporarily unavailable. Please try again.";
+    }
+
+    if (!error.response) {
+      return "Unable to reach the authentication service. Check your connection and try again.";
+    }
+  }
+
+  if (
+    error instanceof Error &&
+    error.message ===
+      "Authentication response did not include a token"
+  ) {
+    return "Authentication service returned an invalid response. Please try again.";
+  }
+
+  return isLogin
+    ? "Authentication failed. Please try again."
+    : "Account could not be created. Please try again.";
+};
 
 const AuthPage: React.FC = () => {
   const auth = useContext(AuthContext);
   const navigate = useNavigate();
-  const [isLogin, setIsLogin] = useState(true);
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-    confirmPassword: "",
-  });
-  const [error, setError] = useState("");
 
-  if (!auth) return null;
-  const { login, signup } = auth;
+  const [isLogin, setIsLogin] =
+    useState(true);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  const [formData, setFormData] =
+    useState<FormData>({
+      email: "",
+      password: "",
+      confirmPassword: "",
+    });
+
+  const [error, setError] =
+    useState("");
+
+  const [submitting, setSubmitting] =
+    useState(false);
+
+  const [
+    showPassword,
+    setShowPassword,
+  ] = useState(false);
+
+  const [
+    showConfirmPassword,
+    setShowConfirmPassword,
+  ] = useState(false);
+
+  if (!auth) {
+    return null;
+  }
+
+  const {
+    login,
+    signup,
+  } = auth;
+
+  const updateField = (
+    field: keyof FormData,
+    value: string
   ) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    setError("");
+    setFormData(
+      (current) => ({
+        ...current,
+        [field]: value,
+      })
+    );
+
+    if (error) {
+      setError("");
+    }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const switchMode = () => {
+    setIsLogin(
+      (current) => !current
+    );
+
+    setFormData(
+      (current) => ({
+        email: current.email,
+        password: "",
+        confirmPassword: "",
+      })
+    );
+
+    setError("");
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+  };
+
+  const handleSubmit = async (
+    event: React.FormEvent
+  ) => {
+    event.preventDefault();
+
+    const email =
+      formData.email.trim();
+
+    if (!email || !formData.password) {
+      setError(
+        "Email and password are required."
+      );
+      return;
+    }
+
+    if (
+      !isLogin &&
+      formData.password !==
+        formData.confirmPassword
+    ) {
+      setError(
+        "Passwords do not match."
+      );
+      return;
+    }
+
+    setSubmitting(true);
+    setError("");
+
     try {
-      if (!formData.email || !formData.password) {
-        setError("Email and password are required.");
-        return;
-      }
-
-      if (!isLogin) {
-        if (formData.password !== formData.confirmPassword) {
-          setError("Passwords do not match.");
-          return;
-        }
-        await signup(formData.email, formData.password);
+      if (isLogin) {
+        await login(
+          email,
+          formData.password
+        );
       } else {
-        await login(formData.email, formData.password);
+        await signup(
+          email,
+          formData.password
+        );
       }
 
-      navigate("/dashboard");
-    } catch (err) {
-      setError("Authentication failed. Please try again.");
+      navigate(
+        "/dashboard",
+        {
+          replace: true,
+        }
+      );
+    } catch (error: unknown) {
+      setError(
+        getAuthenticationErrorMessage(
+          error,
+          isLogin
+        )
+      );
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
-    <Wrapper>
-      <VisualPane>Manage your IoT world, anywhere.</VisualPane>
-      <FormPane>
-        <FormBox>
-          <Title>
-            {isLogin ? "Login to your account" : "Create an account"}
-          </Title>
-          <form onSubmit={handleSubmit}>
-            <Input
-              type="email"
-              name="email"
-              placeholder="Email"
-              value={formData.email}
-              onChange={handleChange}
-              style={{ marginBottom: "1rem" }}
-            />
-            <br />
-            <Input
-              type="password"
-              name="password"
-              placeholder="Password"
-              value={formData.password}
-              onChange={handleChange}
-              style={{ marginBottom: "1rem" }}
-            />
-            {!isLogin && (
-              <Input
-                type="password"
-                name="confirmPassword"
-                placeholder="Confirm Password"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                style={{ marginBottom: "1rem" }}
-              />
-            )}
-            {error && (
-              <p style={{ color: "red", fontSize: "0.9rem" }}>{error}</p>
-            )}
-            <Button type="submit" style={{ width: "100%", marginTop: "1rem" }}>
-              {isLogin ? "Login" : "Sign Up"}
-            </Button>
-          </form>
-          <ToggleText>
-            {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
-            <Button
-              variant="link"
-              onClick={() => setIsLogin((prev) => !prev)}
-              style={{ padding: 0, fontSize: "0.9rem" }}
+    <AuthShell>
+      <HeroPane
+        aria-label="IoT Manager introduction"
+      >
+        <HeroBrand>
+          <BrandMark>
+            IO
+          </BrandMark>
+
+          <BrandText>
+            IoT Manager
+          </BrandText>
+        </HeroBrand>
+
+        <HeroContent>
+          <HeroEyebrow>
+            Device control center
+          </HeroEyebrow>
+
+          <HeroTitle>
+            Your connected workspace,
+            simplified.
+          </HeroTitle>
+
+          <HeroDescription>
+            Manage registered devices,
+            monitor their state and keep
+            your IoT workspace organized
+            from a single control center.
+          </HeroDescription>
+
+          <FeatureList>
+            <FeatureItem>
+              Centralized device management
+            </FeatureItem>
+
+            <FeatureItem>
+              Responsive desktop and mobile
+              workspace
+            </FeatureItem>
+
+            <FeatureItem>
+              Light and dark interface modes
+            </FeatureItem>
+          </FeatureList>
+        </HeroContent>
+
+        <HeroFooter>
+          IoT Manager
+        </HeroFooter>
+      </HeroPane>
+
+      <FormRegion>
+        <FormContainer>
+          <MobileBrand>
+            <BrandMark>
+              IO
+            </BrandMark>
+
+            <BrandText>
+              IoT Manager
+            </BrandText>
+          </MobileBrand>
+
+          <AuthCard>
+            <FormEyebrow>
+              {isLogin
+                ? "Welcome back"
+                : "Get started"}
+            </FormEyebrow>
+
+            <FormTitle>
+              {isLogin
+                ? "Sign in to your workspace"
+                : "Create your account"}
+            </FormTitle>
+
+            <FormDescription>
+              {isLogin
+                ? "Enter your account credentials to continue to the dashboard."
+                : "Create an account to start managing your IoT workspace."}
+            </FormDescription>
+
+            <AuthForm
+              onSubmit={handleSubmit}
             >
-              {isLogin ? "Sign Up" : "Login"}
-            </Button>
-          </ToggleText>
-        </FormBox>
-      </FormPane>
-    </Wrapper>
+              <Field>
+                <Label htmlFor="auth-email">
+                  Email address
+                </Label>
+
+                <AuthInput
+                  id="auth-email"
+                  name="email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  value={formData.email}
+                  disabled={submitting}
+                  aria-invalid={
+                    Boolean(error) ||
+                    undefined
+                  }
+                  aria-describedby={
+                    error
+                      ? "auth-error"
+                      : undefined
+                  }
+                  onChange={(event) =>
+                    updateField(
+                      "email",
+                      event.target.value
+                    )
+                  }
+                />
+              </Field>
+
+              <Field>
+                <Label htmlFor="auth-password">
+                  Password
+                </Label>
+
+                <PasswordField>
+                  <PasswordInput
+                    id="auth-password"
+                    name="password"
+                    type={
+                      showPassword
+                        ? "text"
+                        : "password"
+                    }
+                    autoComplete={
+                      isLogin
+                        ? "current-password"
+                        : "new-password"
+                    }
+                    placeholder="Enter your password"
+                    value={formData.password}
+                    disabled={submitting}
+                    aria-invalid={
+                      Boolean(error) ||
+                      undefined
+                    }
+                    aria-describedby={
+                      error
+                        ? "auth-error"
+                        : undefined
+                    }
+                    onChange={(event) =>
+                      updateField(
+                        "password",
+                        event.target.value
+                      )
+                    }
+                  />
+
+                  <PasswordToggle
+                    type="button"
+                    disabled={submitting}
+                    aria-label={
+                      showPassword
+                        ? "Hide password"
+                        : "Show password"
+                    }
+                    aria-pressed={showPassword}
+                    onClick={() =>
+                      setShowPassword(
+                        (current) =>
+                          !current
+                      )
+                    }
+                  >
+                    {showPassword
+                      ? "Hide"
+                      : "Show"}
+                  </PasswordToggle>
+                </PasswordField>
+              </Field>
+
+              {!isLogin && (
+                <Field>
+                  <Label
+                    htmlFor="auth-confirm-password"
+                  >
+                    Confirm password
+                  </Label>
+
+                  <PasswordField>
+                    <PasswordInput
+                      id="auth-confirm-password"
+                      name="confirmPassword"
+                      type={
+                        showConfirmPassword
+                          ? "text"
+                          : "password"
+                      }
+                      autoComplete="new-password"
+                      placeholder="Repeat your password"
+                      value={
+                        formData.confirmPassword
+                      }
+                      disabled={submitting}
+                      aria-invalid={
+                        Boolean(error) ||
+                        undefined
+                      }
+                      aria-describedby={
+                        error
+                          ? "auth-error"
+                          : undefined
+                      }
+                      onChange={(event) =>
+                        updateField(
+                          "confirmPassword",
+                          event.target.value
+                        )
+                      }
+                    />
+
+                    <PasswordToggle
+                      type="button"
+                      disabled={submitting}
+                      aria-label={
+                        showConfirmPassword
+                          ? "Hide confirmation password"
+                          : "Show confirmation password"
+                      }
+                      aria-pressed={
+                        showConfirmPassword
+                      }
+                      onClick={() =>
+                        setShowConfirmPassword(
+                          (current) =>
+                            !current
+                        )
+                      }
+                    >
+                      {showConfirmPassword
+                        ? "Hide"
+                        : "Show"}
+                    </PasswordToggle>
+                  </PasswordField>
+                </Field>
+              )}
+
+              {error && (
+                <ErrorMessage
+                  id="auth-error"
+                  role="alert"
+                  aria-live="assertive"
+                >
+                  {error}
+                </ErrorMessage>
+              )}
+
+              <Button
+                type="submit"
+                fullWidth
+                loading={submitting}
+              >
+                {isLogin
+                  ? "Sign in"
+                  : "Create account"}
+              </Button>
+            </AuthForm>
+
+            <ModeSwitch>
+              {isLogin
+                ? "New to IoT Manager?"
+                : "Already have an account?"}{" "}
+              <Button
+                variant="link"
+                disabled={submitting}
+                onClick={switchMode}
+              >
+                {isLogin
+                  ? "Create account"
+                  : "Sign in"}
+              </Button>
+            </ModeSwitch>
+
+            <SecurityNote>
+              Your session is stored only
+              after successful authentication.
+            </SecurityNote>
+          </AuthCard>
+        </FormContainer>
+      </FormRegion>
+    </AuthShell>
   );
 };
 
