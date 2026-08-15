@@ -49,20 +49,6 @@ export const createDevice = async (
   );
 };
 
-export const updateDevice = async (
-  id: string,
-  device: {
-    name: string;
-    type: string;
-    status: string;
-  }
-) => {
-  return axios.put<DeviceRecord>(
-    `${DEVICE_API_URL}/${id}`,
-    device
-  );
-};
-
 export const rotateDeviceCredential =
   async (
     id: string

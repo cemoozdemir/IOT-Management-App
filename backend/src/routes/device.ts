@@ -11,12 +11,37 @@ import {
   AuthenticatedRequest,
 } from "../types/AuthenticatedRequest";
 import {
+  withDerivedDevicePresence,
+} from "../utils/devicePresence";
+import {
   issueDeviceCredential,
   revokeActiveDeviceCredentials,
   rotateDeviceCredential,
 } from "../services/deviceCredentialService";
 
 const router = express.Router();
+
+type DevicePlainRecord =
+  Record<string, unknown> & {
+    lastSeenAt?:
+      | Date
+      | string
+      | null;
+  };
+
+const serializeDevice = (
+  device: Device,
+  now: Date = new Date()
+) => {
+  const plain =
+    device.toJSON() as
+      DevicePlainRecord;
+
+  return withDerivedDevicePresence(
+    plain,
+    now
+  );
+};
 
 const findOwnedDevice = async (
   deviceId: string,
@@ -79,10 +104,10 @@ router.post(
                   type,
                   userId:
                     req.user!.id,
-                  // Registration does not prove
-                  // that the physical device is connected.
-                  status:
-                    "offline",
+                  // Presence is derived from lastSeenAt.
+                  // A newly registered device has never
+                  // sent authenticated telemetry and is
+                  // therefore presented as offline.
                 },
                 {
                   transaction,
@@ -104,7 +129,9 @@ router.post(
 
       res.status(201).json({
         device:
-          result.device,
+          serializeDevice(
+            result.device
+          ),
         credential: {
           value:
             result
@@ -150,7 +177,18 @@ router.get(
           },
         });
 
-      res.json(devices);
+      const now =
+        new Date();
+
+      res.json(
+        devices.map(
+          (device) =>
+            serializeDevice(
+              device,
+              now
+            )
+        )
+      );
     } catch (err) {
       next(err);
     }
@@ -158,8 +196,8 @@ router.get(
 );
 
 // Update user-managed device metadata.
-// Status remains temporarily supported for
-// backwards compatibility until telemetry owns it.
+// Presence/status is owned exclusively by
+// authenticated telemetry and lastSeenAt.
 router.put(
   "/:id",
   authenticate,
@@ -169,16 +207,30 @@ router.put(
     next: NextFunction
   ): Promise<void> => {
     try {
-      const {
-        name,
-        type,
-        status,
-      } = req.body;
+      const body =
+        req.body &&
+        typeof req.body ===
+          "object"
+          ? req.body
+          : {};
 
       if (!req.user) {
         res.status(403).json({
           error:
             "User not authenticated",
+        });
+        return;
+      }
+
+      if (
+        Object.prototype.hasOwnProperty.call(
+          body,
+          "status"
+        )
+      ) {
+        res.status(400).json({
+          error:
+            "Device status is derived from telemetry",
         });
         return;
       }
@@ -197,13 +249,41 @@ router.put(
         return;
       }
 
-      await device.update({
-        name,
-        type,
-        status,
-      });
+      const updates:
+        Record<
+          string,
+          unknown
+        > = {};
 
-      res.json(device);
+      if (
+        Object.prototype.hasOwnProperty.call(
+          body,
+          "name"
+        )
+      ) {
+        updates.name =
+          body.name;
+      }
+
+      if (
+        Object.prototype.hasOwnProperty.call(
+          body,
+          "type"
+        )
+      ) {
+        updates.type =
+          body.type;
+      }
+
+      await device.update(
+        updates
+      );
+
+      res.json(
+        serializeDevice(
+          device
+        )
+      );
     } catch (err) {
       next(err);
     }
