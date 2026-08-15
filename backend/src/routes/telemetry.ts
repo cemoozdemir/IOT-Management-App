@@ -23,6 +23,9 @@ const METRIC_PATTERN =
 const UNIT_PATTERN =
   /^[^\u0000-\u001f\u007f]{1,32}$/;
 
+const ISO_TIMESTAMP_PATTERN =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/;
+
 const MAX_FUTURE_SKEW_MS =
   5 * 60 * 1000;
 
@@ -152,41 +155,45 @@ const normalizeTelemetryPayload = (
     }
   }
 
-  let recordedAt =
-    now;
+  if (
+    typeof body.recordedAt !==
+      "string" ||
+    body.recordedAt.length === 0
+  ) {
+    return {
+      ok: false,
+      error:
+        "recordedAt is required",
+    };
+  }
 
   if (
-    body.recordedAt !==
-      undefined &&
-    body.recordedAt !== null
+    !ISO_TIMESTAMP_PATTERN.test(
+      body.recordedAt
+    )
   ) {
-    if (
-      typeof body.recordedAt !==
-      "string"
-    ) {
-      return {
-        ok: false,
-        error:
-          "recordedAt must be an ISO timestamp",
-      };
-    }
+    return {
+      ok: false,
+      error:
+        "recordedAt must be an ISO 8601 timestamp",
+    };
+  }
 
-    recordedAt =
-      new Date(
-        body.recordedAt
-      );
+  const recordedAt =
+    new Date(
+      body.recordedAt
+    );
 
-    if (
-      Number.isNaN(
-        recordedAt.getTime()
-      )
-    ) {
-      return {
-        ok: false,
-        error:
-          "recordedAt must be a valid timestamp",
-      };
-    }
+  if (
+    Number.isNaN(
+      recordedAt.getTime()
+    )
+  ) {
+    return {
+      ok: false,
+      error:
+        "recordedAt must be a valid timestamp",
+    };
   }
 
   if (

@@ -408,6 +408,70 @@ test(
         updatesBeforeConflict
       );
 
+      const missingRecordedAt =
+        createResponse();
+
+      let dbCalledForMissingRecordedAt =
+        false;
+
+      DeviceTelemetry.findOrCreate =
+        async () => {
+          dbCalledForMissingRecordedAt =
+            true;
+
+          throw new Error(
+            "DB should not be called"
+          );
+        };
+
+      await handler(
+        {
+          device: {
+            id:
+              "device-id",
+            credentialId:
+              "credential-id",
+          },
+          body: {
+            eventId,
+            metric:
+              "temperature",
+            value:
+              21.5,
+            unit:
+              "C",
+          },
+        },
+        missingRecordedAt.response,
+        (error) => {
+          if (error) {
+            throw error;
+          }
+        }
+      );
+
+      assert.equal(
+        missingRecordedAt
+          .state
+          .statusCode,
+        400
+      );
+
+      assert.deepEqual(
+        missingRecordedAt
+          .state
+          .body,
+        {
+          error:
+            "recordedAt is required",
+        }
+      );
+
+      assert.equal(
+        dbCalledForMissingRecordedAt,
+        false
+      );
+
       const invalid =
         createResponse();
 
