@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: iot_ci
+          POSTGRES_USER: iot_ci
+          POSTGRES_PASSWORD: iot_ci_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U iot_ci -d iot_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      DB_NAME: iot_ci
+      DB_USER: iot_ci
+      DB_PASS: iot_ci_password
+      DB_HOST: 127.0.0.1
+      JWT_SECRET: ci-jwt-secret-not-for-production
+      NODE_ENV: development
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Registration security
+        run: npm run test:security-registration
+
+      - name: Auth identity
+        run: npm run test:auth-identity
+
+      - name: No custom user device token
+        run: npm run test:no-custom-token
+
+      - name: Device identity
+        run: npm run test:device-identity
+
+      - name: Migration ownership
+        run: npm run test:migration-only
+
+      - name: Telemetry
+        run: npm run test:telemetry
+
+      - name: Migrate fresh PostgreSQL
+        run: npx sequelize-cli db:migrate --env development
+
+      - name: Roll back latest migration
+        run: npx sequelize-cli db:migrate:undo --env development
+
+      - name: Reapply latest migration
+        run: npx sequelize-cli db:migrate --env development
+
+  frontend:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Production build
+        env:
+          CI: "true"
+        run: npm run build
