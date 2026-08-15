@@ -192,6 +192,23 @@ test(
             id:
               "device-created",
             ...values,
+
+            toJSON() {
+              return {
+                id:
+                  "device-created",
+                ...values,
+
+                // Deliberately contradictory legacy
+                // storage value. API serialization
+                // must ignore it and derive presence
+                // from lastSeenAt.
+                status:
+                  "online",
+                lastSeenAt:
+                  null,
+              };
+            },
           };
         };
 
@@ -247,9 +264,26 @@ test(
             "ESP32",
           userId:
             "owner-user",
-          status:
-            "offline",
         }
+      );
+
+      assert.equal(
+        Object.prototype.hasOwnProperty.call(
+          createdDeviceValues,
+          "status"
+        ),
+        false,
+        "device creation must not persist application-managed presence status"
+      );
+
+      assert.equal(
+        createResult
+          .state
+          .body
+          .device
+          .status,
+        "offline",
+        "new devices must be presented offline until authenticated telemetry is received"
       );
 
       assert.equal(
