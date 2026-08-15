@@ -5,6 +5,7 @@ import cors from "cors"; // Eğer cors'u import etmediyseniz, bunu ekleyin
 import helmet from "helmet"; // Eğer helmet'u import etmediyseniz, bunu ekleyin
 import sequelize from "./config/database";
 import deviceRoutes from "./routes/device";
+import telemetryRoutes from "./routes/telemetry";
 import authRoutes from "./routes/auth"; // Import authRoutes
 import "./config/env";
 
@@ -42,6 +43,7 @@ app.get('/api/health', (_req, res) => {
 // Database schema changes are managed exclusively through migrations.
 
 app.use("/api/devices", deviceRoutes);
+app.use("/api/telemetry", telemetryRoutes);
 app.use("/api/auth", authRoutes); // route'u aktif hale getir
 
 // Başka route'lar veya middleware'ler de ekleyebilirsiniz
