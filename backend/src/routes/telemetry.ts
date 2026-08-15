@@ -2,12 +2,21 @@ import express, {
   NextFunction,
   Response,
 } from "express";
+import {
+  QueryTypes,
+} from "sequelize";
 import sequelize from "../config/database";
+import {
+  authenticate,
+} from "../middleware/authMiddleware";
 import {
   authenticateDevice,
 } from "../middleware/deviceAuthMiddleware";
 import Device from "../models/Device";
 import DeviceTelemetry from "../models/DeviceTelemetry";
+import {
+  AuthenticatedRequest,
+} from "../types/AuthenticatedRequest";
 import {
   DeviceAuthenticatedRequest,
 } from "../types/DeviceAuthenticatedRequest";
@@ -28,6 +37,73 @@ const ISO_TIMESTAMP_PATTERN =
 
 const MAX_FUTURE_SKEW_MS =
   5 * 60 * 1000;
+
+const MAX_LATEST_MEASUREMENTS =
+  250;
+
+const LATEST_TELEMETRY_FETCH_LIMIT =
+  MAX_LATEST_MEASUREMENTS +
+  1;
+
+interface LatestTelemetryRow {
+  id: string;
+  deviceId: string;
+  eventId: string;
+  metric: string;
+  value:
+    | number
+    | string;
+  unit: string | null;
+  recordedAt:
+    | Date
+    | string;
+  receivedAt:
+    | Date
+    | string;
+}
+
+const LATEST_TELEMETRY_SQL = `
+  SELECT
+    latest."id",
+    latest."deviceId",
+    latest."eventId",
+    latest."metric",
+    latest."value",
+    latest."unit",
+    latest."recordedAt",
+    latest."receivedAt"
+  FROM (
+    SELECT DISTINCT ON (
+      t."deviceId",
+      t."metric"
+    )
+      t."id",
+      t."deviceId",
+      t."eventId",
+      t."metric",
+      t."value",
+      t."unit",
+      t."recordedAt",
+      t."receivedAt"
+    FROM "DeviceTelemetry" AS t
+    INNER JOIN "Devices" AS d
+      ON d."id" =
+        t."deviceId"
+    WHERE d."userId" =
+      :userId
+    ORDER BY
+      t."deviceId" ASC,
+      t."metric" ASC,
+      t."recordedAt" DESC,
+      t."receivedAt" DESC,
+      t."id" DESC
+  ) AS latest
+  ORDER BY
+    latest."recordedAt" DESC,
+    latest."receivedAt" DESC,
+    latest."id" DESC
+  LIMIT ${LATEST_TELEMETRY_FETCH_LIMIT}
+`;
 
 interface TelemetryPayload {
   eventId: string;
@@ -241,6 +317,87 @@ const telemetryMatches = (
       payload.recordedAt.getTime()
   );
 };
+
+router.get(
+  "/latest",
+  authenticate,
+  async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    if (!req.user) {
+      res.status(403).json({
+        error:
+          "User not authenticated",
+      });
+      return;
+    }
+
+    try {
+      const rows =
+        await sequelize.query<
+          LatestTelemetryRow
+        >(
+          LATEST_TELEMETRY_SQL,
+          {
+            replacements: {
+              userId:
+                req.user.id,
+            },
+            type:
+              QueryTypes.SELECT,
+          }
+        );
+
+      const truncated =
+        rows.length >
+        MAX_LATEST_MEASUREMENTS;
+
+      const measurements =
+        rows
+          .slice(
+            0,
+            MAX_LATEST_MEASUREMENTS
+          )
+          .map(
+            (row) => ({
+              id:
+                row.id,
+              deviceId:
+                row.deviceId,
+              eventId:
+                row.eventId,
+              metric:
+                row.metric,
+              value:
+                Number(
+                  row.value
+                ),
+              unit:
+                row.unit,
+              recordedAt:
+                new Date(
+                  row.recordedAt
+                ).toISOString(),
+              receivedAt:
+                new Date(
+                  row.receivedAt
+                ).toISOString(),
+            })
+          );
+
+      res.json({
+        generatedAt:
+          new Date().toISOString(),
+        truncated,
+        measurements,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 router.post(
   "/",
