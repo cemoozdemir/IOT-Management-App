@@ -224,6 +224,11 @@ test(
         /LIMIT 251/
       );
 
+      assert.match(
+        queryCall.sql,
+        /latest\."id" DESC/
+      );
+
       assert.deepEqual(
         queryCall.options
           .replacements,

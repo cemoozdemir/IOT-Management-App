@@ -97,3 +97,19 @@ The dashboard now:
 - SSE/WebSocket
 - alert rules
 - telemetry retention policy
+
+## Review correction — deterministic timestamp ties
+
+Remote review identified a deterministic-order edge case when multiple
+telemetry rows share identical `recordedAt` and `receivedAt` values.
+
+The latest-read contract now uses `id DESC` as the final stable
+tie-breaker:
+
+- inside each `(deviceId, metric)` latest-row selection;
+- in the global capped result ordering;
+- in the supporting PostgreSQL index.
+
+The real PostgreSQL test includes two temperature events with identical
+event and receive timestamps and verifies that the deterministic
+higher-ID row is selected.
