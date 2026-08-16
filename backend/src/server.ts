@@ -1,73 +1,240 @@
-import express, { Application } from "express";
+import express, {
+  Application,
+  ErrorRequestHandler,
+} from "express";
 import http from "http";
-import WebSocket, { Server } from "ws";
-import cors from "cors"; // Eğer cors'u import etmediyseniz, bunu ekleyin
-import helmet from "helmet"; // Eğer helmet'u import etmediyseniz, bunu ekleyin
+import cors from "cors";
+import helmet from "helmet";
 import sequelize from "./config/database";
+import {
+  apiRateLimiter,
+} from "./middleware/rateLimits";
 import deviceRoutes from "./routes/device";
 import telemetryRoutes from "./routes/telemetry";
-import authRoutes from "./routes/auth"; // Import authRoutes
+import authRoutes from "./routes/auth";
 import "./config/env";
 
-const app: Application = express();
+const app: Application =
+  express();
 
-// Security middlewares
+app.disable(
+  "x-powered-by"
+);
+
+// The API binds only to loopback in
+// production and is reached through
+// one local reverse proxy.
+app.set(
+  "trust proxy",
+  1
+);
+
 const allowedOrigin =
-  process.env.NODE_ENV === "production"
-    ? "https://iot.ozdmr.dev" // Prod için frontend URL'si
-    : "http://localhost:3000"; // Lokal için frontend URL'si (React'in varsayılan portu)
+  process.env.NODE_ENV ===
+  "production"
+    ? "https://iot.ozdmr.dev"
+    : "http://localhost:3000";
+
+app.use(
+  helmet()
+);
 
 app.use(
   cors({
-    origin: allowedOrigin, // sadece belirli originleri kabul et
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Accept"],
+    origin:
+      allowedOrigin,
+    credentials:
+      true,
+    methods: [
+      "GET",
+      "POST",
+      "PUT",
+      "DELETE",
+      "OPTIONS",
+    ],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "Accept",
+    ],
   })
 );
 
-// Proxy ayarini açıyoruz
-app.set("trust proxy", true);
+// API payloads are intentionally small.
+// This bounds parser memory/CPU before
+// route-level validation runs.
+app.use(
+  express.json({
+    limit:
+      "16kb",
+    strict:
+      true,
+  })
+);
 
-app.use(helmet());
-app.use(express.json());
+app.get(
+  "/health",
+  (_req, res) => {
+    res.status(200).json({
+      status:
+        "ok",
+      service:
+        "iot-api",
+      time:
+        new Date()
+          .toISOString(),
+    });
+  }
+);
 
-// health checks
-app.get('/health', (_req, res) => {
-  res.status(200).json({ status: 'ok', service: 'iot-api', time: new Date().toISOString() });
-});
-app.get('/api/health', (_req, res) => {
-  res.status(200).json({ status: 'ok', service: 'iot-api', time: new Date().toISOString() });
-});
+app.get(
+  "/api/health",
+  (_req, res) => {
+    res.status(200).json({
+      status:
+        "ok",
+      service:
+        "iot-api",
+      time:
+        new Date()
+          .toISOString(),
+    });
+  }
+);
 
-// Database schema changes are managed exclusively through migrations.
+// Broad abuse ceiling. Authenticated
+// user/device routes also have narrower
+// identity-scoped limits.
+app.use(
+  "/api",
+  apiRateLimiter
+);
 
-app.use("/api/devices", deviceRoutes);
-app.use("/api/telemetry", telemetryRoutes);
-app.use("/api/auth", authRoutes); // route'u aktif hale getir
+app.use(
+  "/api/devices",
+  deviceRoutes
+);
 
-// Başka route'lar veya middleware'ler de ekleyebilirsiniz
+app.use(
+  "/api/telemetry",
+  telemetryRoutes
+);
 
-// Sunucu başlatma
-const server = http.createServer(app);
-const wss = new Server({ server });
+app.use(
+  "/api/auth",
+  authRoutes
+);
 
-const PORT = Number(process.env.PORT) || 3001;
-const HOST = process.env.HOST || '127.0.0.1';
+app.use(
+  (_req, res) => {
+    res.status(404).json({
+      error:
+        "Not found",
+    });
+  }
+);
 
-const startServer = async (): Promise<void> => {
-  await sequelize.authenticate();
+interface RequestParsingError
+  extends Error {
+  type?: string;
+}
 
-  server.listen(PORT, HOST, () => {
-    console.log(
-      `🚀 Server running on http://${HOST}:${PORT}`
+const errorHandler:
+  ErrorRequestHandler =
+  (
+    error,
+    req,
+    res,
+    _next
+  ) => {
+    const parsingError =
+      error as
+        RequestParsingError;
+
+    if (
+      parsingError.type ===
+      "entity.too.large"
+    ) {
+      res.status(413).json({
+        error:
+          "Request body too large",
+      });
+      return;
+    }
+
+    if (
+      parsingError.type ===
+      "entity.parse.failed"
+    ) {
+      res.status(400).json({
+        error:
+          "Invalid JSON body",
+      });
+      return;
+    }
+
+    // Do not log request bodies,
+    // credentials, SQL text or raw
+    // exception messages here.
+    console.error(
+      "Unhandled request error",
+      {
+        method:
+          req.method,
+        path:
+          req.path,
+        errorName:
+          error instanceof
+          Error
+            ? error.name
+            : "UnknownError",
+      }
     );
-  });
-};
 
-void startServer().catch(() => {
-  console.error(
-    "Database connection failed during startup"
+    res.status(500).json({
+      error:
+        "Internal server error",
+    });
+  };
+
+app.use(
+  errorHandler
+);
+
+const server =
+  http.createServer(
+    app
   );
-  process.exit(1);
-});
+
+const PORT =
+  Number(
+    process.env.PORT
+  ) || 3001;
+
+const HOST =
+  process.env.HOST ||
+  "127.0.0.1";
+
+const startServer =
+  async (): Promise<void> => {
+    await sequelize.authenticate();
+
+    server.listen(
+      PORT,
+      HOST,
+      () => {
+        console.log(
+          `Server running on http://${HOST}:${PORT}`
+        );
+      }
+    );
+  };
+
+void startServer().catch(
+  () => {
+    console.error(
+      "Database connection failed during startup"
+    );
+    process.exit(1);
+  }
+);
