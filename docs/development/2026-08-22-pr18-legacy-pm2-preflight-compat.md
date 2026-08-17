@@ -86,3 +86,27 @@ Neither the failed preflight nor this PR performs:
 - migration;
 - database mutation;
 - production secret modification.
+
+## Remote review correction — jq command continuation
+
+Remote patch review identified a shell runtime defect in the new
+post-deployment PM2 `NODE_ENV` verification.
+
+The generated command had:
+
+`jq -r --arg app "$PM2_APP"`
+
+on one line without a shell continuation before the jq filter.
+
+Although `bash -n` accepts that syntax, runtime execution would treat
+the following filter line as a separate command.
+
+The command now includes the required continuation.
+
+The deployment safety test was extended to:
+
+- require the exact continued jq command shape;
+- execute the jq expression against a small representative PM2 JSON
+  payload and require `production`.
+
+No production deployment or database mutation occurred.
