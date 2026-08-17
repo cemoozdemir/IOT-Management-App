@@ -164,6 +164,48 @@ then
   exit 1
 fi
 
+#
+# Deploy, artifact rollback and database restore must serialize
+# production mutations through one shared lock.
+#
+for runtime in "$DEPLOY" "$ROLLBACK" "$RESTORE"; do
+  grep -qF \
+    'LOCK_FILE="/run/lock/iot-management-app-deploy.lock"' \
+    "$runtime"
+
+  grep -qF \
+    'flock -n 9' \
+    "$runtime"
+done
+
+grep -qF \
+  'APPLICATION_BACKUP_SHA256=VERIFIED' \
+  "$ROLLBACK"
+
+grep -qF \
+  'SHA256SUMS' \
+  "$ROLLBACK"
+
+grep -qF \
+  'IOT_API_PORT' \
+  "$ROLLBACK"
+
+grep -qF \
+  'DATABASE_BACKUP_SHA256=VERIFIED' \
+  "$RESTORE"
+
+grep -qF \
+  'SHA256SUMS' \
+  "$RESTORE"
+
+grep -qF \
+  'MANIFEST_PROD' \
+  "$RESTORE"
+
+grep -qF \
+  'Database backup başka production path' \
+  "$RESTORE"
+
 SAFETY_LINE="$(
   grep -n \
     'database-pre-restore-current-' \

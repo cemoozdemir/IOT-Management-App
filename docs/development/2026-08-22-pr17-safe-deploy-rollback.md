@@ -209,3 +209,25 @@ Negative command checks are therefore intentionally scoped to the
 executable deployment, rollback and database-restore runtime scripts.
 Documentation and the test implementation itself are not executable
 deployment surfaces.
+
+## Remote review correction — serialized recovery and backup integrity
+
+Remote patch review found that deployment used a mutation lock while
+standalone artifact rollback and explicit database restore did not.
+
+All three production-mutating workflows now share:
+
+`/run/lock/iot-management-app-deploy.lock`
+
+Recovery validation was also strengthened:
+
+- artifact rollback verifies its recorded SHA256 before extraction;
+- database restore verifies its recorded dump SHA256 before destructive
+  work;
+- database restore validates backup-manifest production-path
+  provenance;
+- rollback loopback health derives the API port from the canonical
+  production environment.
+
+No production deployment or database mutation occurred during this
+review correction.
