@@ -206,6 +206,64 @@ grep -qF \
   'Database backup başka production path' \
   "$RESTORE"
 
+#
+# Root deployment reads Git metadata without optional index writes.
+#
+grep -qF \
+  'GIT_OPTIONAL_LOCKS=0' \
+  "$DEPLOY"
+
+#
+# Legacy process compatibility is narrow:
+# unset or production only.
+#
+grep -qF \
+  'CURRENT_PM2_NODE_ENV=LEGACY_UNSET_ACCEPTED' \
+  "$DEPLOY"
+
+grep -qF \
+  'CURRENT_PM2_NODE_ENV=PRODUCTION' \
+  "$DEPLOY"
+
+grep -qF \
+  'PM2 NODE_ENV açıkça production dışında' \
+  "$DEPLOY"
+
+#
+# Canonical production env may be unset during transition,
+# but may never explicitly declare a non-production environment.
+#
+grep -qF \
+  'IOT_CANON_NODE_ENV="${NODE_ENV:-}"' \
+  "$DEPLOY"
+
+grep -qF \
+  'CANONICAL_ENV_NODE_ENV=UNSET_ACCEPTED' \
+  "$DEPLOY"
+
+grep -qF \
+  'CANONICAL_ENV_NODE_ENV=PRODUCTION' \
+  "$DEPLOY"
+
+grep -qF \
+  'Canonical .env.production NODE_ENV production dışında' \
+  "$DEPLOY"
+
+#
+# Newly created PM2 process has a strict invariant.
+#
+grep -qF \
+  'process_node_env' \
+  "$DEPLOY"
+
+grep -qF \
+  '[ "$process_node_env" = "production" ]' \
+  "$DEPLOY"
+
+grep -qF \
+  'POST_DEPLOY_PM2_NODE_ENV=PRODUCTION' \
+  "$DEPLOY"
+
 SAFETY_LINE="$(
   grep -n \
     'database-pre-restore-current-' \
