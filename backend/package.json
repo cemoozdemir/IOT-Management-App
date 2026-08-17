@@ -15,7 +15,8 @@
     "test:presence": "node --test tests/device-presence.test.js",
     "test:telemetry-read": "node --test tests/telemetry-read.test.js tests/telemetry-latest-index-migration.test.js",
     "test:telemetry-read-pg": "node --test tests/telemetry-read-postgres.test.js",
-    "test:security-hardening": "node --test tests/security-hardening.test.js"
+    "test:security-hardening": "node --test tests/security-hardening.test.js",
+    "test:deploy-safety": "bash ../ops/deploy/test-deploy-safety.sh"
   },
   "keywords": [],
   "author": "",
