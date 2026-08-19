@@ -193,3 +193,40 @@ requested production directory.
 
 Rollback loopback health uses `PORT` from the canonical root-owned
 production environment, with 3001 only as the default.
+
+## Legacy PM2 transition and read-only Git access
+
+The production checkout used as deployment source is owned by the
+normal development user while deployment itself runs as root.
+
+All Git operations performed by the deployment engine are read-only
+and run with:
+
+`GIT_OPTIONAL_LOCKS=0`
+
+This prevents read-only root preflight/deployment checks from
+opportunistically refreshing and taking ownership of `.git/index`.
+
+### Legacy PM2 NODE_ENV
+
+The process that predates the safe deployment workflow may have no
+`NODE_ENV` in PM2 launch metadata.
+
+Preflight therefore accepts only:
+
+- `production`;
+- unset, as the known legacy transition state.
+
+Any explicit different PM2 value is rejected.
+
+The canonical `.env.production` follows the same transition rule:
+
+- `production` => accepted;
+- unset => accepted;
+- explicit non-production => rejected.
+
+This exception applies only before replacement of the legacy process.
+
+Every PM2 process created by the safe deployment workflow is launched
+with `NODE_ENV=production`, and that launch metadata is explicitly
+verified after startup.
