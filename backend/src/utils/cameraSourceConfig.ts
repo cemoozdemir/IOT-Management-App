@@ -348,6 +348,15 @@ export const parseCameraSourceUrl =
         parsed.password
       );
 
+    if (
+      (username === "") !==
+      (password === "")
+    ) {
+      throw new CameraSourceInputError(
+        "Camera source username and password must be provided together"
+      );
+    }
+
     const protectedFields =
       encryptProtectedConfig({
         username,

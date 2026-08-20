@@ -18,7 +18,8 @@
     "test:security-hardening": "node --test tests/security-hardening.test.js",
     "test:deploy-safety": "bash ../ops/deploy/test-deploy-safety.sh",
     "test:camera-source": "node --test tests/camera-source-migration.test.js",
-    "test:camera-settings": "node --test tests/camera-source-settings.test.js"
+    "test:camera-settings": "node --test tests/camera-source-settings.test.js",
+    "test:media-gateway": "node --test tests/media-gateway-service.test.js"
   },
   "keywords": [],
   "author": "",
