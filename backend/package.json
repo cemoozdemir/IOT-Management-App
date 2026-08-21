@@ -6,7 +6,8 @@
     "start": "node dist/server.js",
     "dev": "ts-node -r tsconfig-paths/register src/server.ts",
     "build": "tsc",
-    "test:security-registration": "node --test tests/public-registration-role.test.js"
+    "test:security-registration": "node --test tests/public-registration-role.test.js",
+    "test:auth-identity": "node --test tests/auth-identity-model.test.js"
   },
   "keywords": [],
   "author": "",
