@@ -1,19 +1,16 @@
-import express, { Request, Response, NextFunction } from "express";
+import express, { Response, NextFunction } from "express";
 import { authenticate } from "../middleware/authMiddleware";
 import Device from "../models/Device";
+import { AuthenticatedRequest } from "../types/AuthenticatedRequest";
 
 const router = express.Router();
-
-interface AuthRequest extends Request {
-  user?: { id: string; role: "admin" | "user" };
-}
 
 // Create a new device
 router.post(
   "/",
   authenticate,
   async (
-    req: AuthRequest,
+    req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
   ): Promise<void> => {
@@ -44,7 +41,7 @@ router.get(
   "/",
   authenticate,
   async (
-    req: AuthRequest,
+    req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
   ): Promise<void> => {
@@ -67,7 +64,7 @@ router.put(
   "/:id",
   authenticate,
   async (
-    req: AuthRequest,
+    req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
   ): Promise<void> => {
@@ -101,7 +98,7 @@ router.delete(
   "/:id",
   authenticate,
   async (
-    req: AuthRequest,
+    req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
   ): Promise<void> => {

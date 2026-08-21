@@ -1,4 +1,4 @@
-import jwt, { SignOptions } from "jsonwebtoken";
+import jwt, { JwtPayload, SignOptions } from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { requireEnv } from "../config/env";
 
@@ -23,6 +23,20 @@ export const generateToken = (
   return jwt.sign({ id: userId }, SECRET_KEY, { expiresIn });
 };
 
-export const verifyToken = (token: string): any => {
-  return jwt.verify(token, SECRET_KEY);
+export interface AuthTokenPayload extends JwtPayload {
+  id: string;
+}
+
+export const verifyToken = (token: string): AuthTokenPayload => {
+  const decoded = jwt.verify(token, SECRET_KEY);
+
+  if (
+    typeof decoded === "string" ||
+    typeof decoded.id !== "string" ||
+    decoded.id.trim() === ""
+  ) {
+    throw new Error("Invalid token payload");
+  }
+
+  return decoded as AuthTokenPayload;
 };
