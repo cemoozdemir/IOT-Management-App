@@ -32,10 +32,13 @@ export const registerHandler = async (
       role: "user",
     });
 
+    const token = generateToken(user.id);
+
     res.status(201).json({
       message: "User registered",
       userId: user.id,
       role: user.role,
+      token,
     });
   } catch (err) {
     console.error("❌ Register error (detailed):", JSON.stringify(err, null, 2));
