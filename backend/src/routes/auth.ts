@@ -1,8 +1,6 @@
 import express, { Request, Response, Router } from "express";
 import User from "../models/User";
 import { hashPassword, comparePasswords, generateToken } from "../utils/auth";
-import { authenticate } from "../middleware/authMiddleware";
-import { AuthenticatedRequest } from "types/AuthenticatedRequest";
 
 const router: Router = express.Router();
 
@@ -68,51 +66,6 @@ const loginHandler = async (
     res.status(500).json({ error: "Server error" });
   }
 };
-
-type TokenDuration = "30d" | "90d" | "180d";
-
-const ALLOWED_TOKEN_DURATIONS =
-  new Set<TokenDuration>(["30d", "90d", "180d"]);
-
-const isTokenDuration = (
-  value: unknown
-): value is TokenDuration => {
-  return (
-    typeof value === "string" &&
-    ALLOWED_TOKEN_DURATIONS.has(value as TokenDuration)
-  );
-};
-
-export const tokenHandler = (
-  req: AuthenticatedRequest,
-  res: Response
-): void => {
-  const requestedDuration = req.body?.duration;
-  const duration =
-    requestedDuration === undefined
-      ? "30d"
-      : requestedDuration;
-
-  if (!isTokenDuration(duration)) {
-    res.status(400).json({
-      error: "Invalid token duration",
-    });
-    return;
-  }
-
-  const token = generateToken(
-    req.user!.id,
-    duration
-  );
-
-  res.json({ token });
-};
-
-router.post(
-  "/token",
-  authenticate,
-  tokenHandler
-);
 
 // Routes
 router.post("/register", registerHandler);
