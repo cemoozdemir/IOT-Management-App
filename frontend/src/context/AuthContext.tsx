@@ -28,10 +28,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       });
 
       const newToken = response.data.token;
+
+      if (typeof newToken !== "string" || newToken.length === 0) {
+        throw new Error("Authentication response did not include a token");
+      }
+
       localStorage.setItem("token", newToken);
       setToken(newToken);
     } catch (error) {
-      console.error("Login error:", error); // Hata durumunda loglama
+      localStorage.removeItem("token");
+      setToken(null);
+      throw error;
     }
   };
 
@@ -43,14 +50,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       const response = await axios.post(url, {
         email,
         password,
-        role: "user",
       });
 
       const newToken = response.data.token;
+
+      if (typeof newToken !== "string" || newToken.length === 0) {
+        throw new Error("Authentication response did not include a token");
+      }
+
       localStorage.setItem("token", newToken);
       setToken(newToken);
     } catch (error) {
-      console.error("Signup error:", error); // Hata durumunda loglama
+      localStorage.removeItem("token");
+      setToken(null);
+      throw error;
     }
   };
 
