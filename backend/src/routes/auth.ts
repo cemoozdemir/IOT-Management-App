@@ -69,14 +69,49 @@ const loginHandler = async (
   }
 };
 
+type TokenDuration = "30d" | "90d" | "180d";
+
+const ALLOWED_TOKEN_DURATIONS =
+  new Set<TokenDuration>(["30d", "90d", "180d"]);
+
+const isTokenDuration = (
+  value: unknown
+): value is TokenDuration => {
+  return (
+    typeof value === "string" &&
+    ALLOWED_TOKEN_DURATIONS.has(value as TokenDuration)
+  );
+};
+
+export const tokenHandler = (
+  req: AuthenticatedRequest,
+  res: Response
+): void => {
+  const requestedDuration = req.body?.duration;
+  const duration =
+    requestedDuration === undefined
+      ? "30d"
+      : requestedDuration;
+
+  if (!isTokenDuration(duration)) {
+    res.status(400).json({
+      error: "Invalid token duration",
+    });
+    return;
+  }
+
+  const token = generateToken(
+    req.user!.id,
+    duration
+  );
+
+  res.json({ token });
+};
+
 router.post(
   "/token",
   authenticate,
-  (req: AuthenticatedRequest, res: Response) => {
-    const { duration } = req.body;
-    const token = generateToken(req.user!.id, duration || "30d");
-    res.json({ token });
-  }
+  tokenHandler
 );
 
 // Routes
