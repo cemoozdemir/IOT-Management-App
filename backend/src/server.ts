@@ -1,16 +1,12 @@
 import express, { Application } from "express";
 import http from "http";
 import WebSocket, { Server } from "ws";
-import dotenv from "dotenv";
 import cors from "cors"; // Eğer cors'u import etmediyseniz, bunu ekleyin
 import helmet from "helmet"; // Eğer helmet'u import etmediyseniz, bunu ekleyin
 import sequelize from "./config/database";
 import deviceRoutes from "./routes/device";
 import authRoutes from "./routes/auth"; // Import authRoutes
-import path from 'path';
-// Load environment variables
-
-dotenv.config({ path: path.resolve(__dirname, ".env.production") });
+import "./config/env";
 
 const app: Application = express();
 
