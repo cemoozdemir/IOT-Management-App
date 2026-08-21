@@ -8,7 +8,7 @@
     "build": "tsc",
     "test:security-registration": "node --test tests/public-registration-role.test.js",
     "test:auth-identity": "node --test tests/auth-identity-model.test.js",
-    "test:token-duration": "node --test tests/token-duration-policy.test.js"
+    "test:no-custom-token": "node --test tests/no-custom-token-endpoint.test.js"
   },
   "keywords": [],
   "author": "",
