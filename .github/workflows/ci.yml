@@ -80,8 +80,14 @@ jobs:
       - name: Device presence
         run: npm run test:presence
 
+      - name: Telemetry read contract
+        run: npm run test:telemetry-read
+
       - name: Migrate fresh PostgreSQL
         run: npx sequelize-cli db:migrate --env development
+
+      - name: Telemetry read PostgreSQL
+        run: npm run test:telemetry-read-pg
 
       - name: Roll back latest migration
         run: npx sequelize-cli db:migrate:undo --env development

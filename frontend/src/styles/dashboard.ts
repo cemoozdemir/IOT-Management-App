@@ -293,3 +293,71 @@ export const CredentialWarning = styled.div`
   font-size: 0.76rem;
   line-height: 1.5;
 `;
+
+export const TelemetryList = styled.div`
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.9rem;
+`;
+
+export const TelemetryRow = styled.div`
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.7rem 0;
+  border-top: 1px solid
+    ${(props) =>
+      props.theme.border};
+
+  &:first-child {
+    border-top: 0;
+  }
+`;
+
+export const TelemetryDevice = styled.div`
+  overflow: hidden;
+  color: ${(props) =>
+    props.theme.text};
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+export const TelemetryMetric = styled.div`
+  margin-top: 0.2rem;
+  color: ${(props) =>
+    props.theme.textMuted};
+  font-size: 0.72rem;
+`;
+
+export const TelemetryReading = styled.div`
+  color: ${(props) =>
+    props.theme.text};
+  font-size: 0.92rem;
+  font-weight: 760;
+  text-align: right;
+`;
+
+export const TelemetryTimestamp = styled.div`
+  margin-top: 0.2rem;
+  color: ${(props) =>
+    props.theme.textMuted};
+  font-size: 0.68rem;
+  text-align: right;
+`;
+
+export const TelemetryFooter = styled.div`
+  margin-top: 0.8rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid
+    ${(props) =>
+      props.theme.border};
+  color: ${(props) =>
+    props.theme.textMuted};
+  font-size: 0.68rem;
+  line-height: 1.5;
+`;
