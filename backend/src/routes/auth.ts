@@ -1,74 +1,231 @@
-import express, { Request, Response, Router } from "express";
+import express, {
+  Request,
+  Response,
+  Router,
+} from "express";
+import {
+  col,
+  fn,
+  UniqueConstraintError,
+  where,
+} from "sequelize";
 import User from "../models/User";
-import { hashPassword, comparePasswords, generateToken } from "../utils/auth";
+import {
+  loginRateLimiter,
+  registerRateLimiter,
+} from "../middleware/rateLimits";
+import {
+  comparePasswords,
+  generateToken,
+  hashPassword,
+} from "../utils/auth";
+import {
+  validateAuthBody,
+} from "../utils/requestValidation";
 
-const router: Router = express.Router();
+const router: Router =
+  express.Router();
 
-interface AuthRequestBody {
-  email: string;
-  password: string;
-}
+const findUserByEmail =
+  async (
+    normalizedEmail:
+      string
+  ) => {
+    return User.findOne({
+      where:
+        where(
+          fn(
+            "lower",
+            col("email")
+          ),
+          normalizedEmail
+        ),
+    });
+  };
 
-// REGISTER
-export const registerHandler = async (
-  req: Request<{}, {}, AuthRequestBody>,
-  res: Response
-): Promise<void> => {
-  try {
-    const { email, password } = req.body;
+// Public registration always creates
+// a normal user. Client-provided roles
+// are deliberately ignored.
+export const registerHandler =
+  async (
+    req:
+      Request<
+        {},
+        {},
+        unknown
+      >,
+    res:
+      Response
+  ): Promise<void> => {
+    const validation =
+      validateAuthBody(
+        req.body,
+        "register"
+      );
 
-    const existingUser = await User.findOne({ where: { email } });
-    if (existingUser) {
-      res.status(400).json({ error: "User already exists" });
+    if (!validation.ok) {
+      res.status(400).json({
+        error:
+          validation.error,
+      });
       return;
     }
 
-    const hashedPassword = await hashPassword(password);
-    const user = await User.create({
+    const {
       email,
-      password: hashedPassword,
-      role: "user",
-    });
+      password,
+    } = validation.value;
 
-    const token = generateToken(user.id);
+    try {
+      const existingUser =
+        await findUserByEmail(
+          email
+        );
 
-    res.status(201).json({
-      message: "User registered",
-      userId: user.id,
-      role: user.role,
-      token,
-    });
-  } catch (err) {
-    console.error("❌ Register error (detailed):", JSON.stringify(err, null, 2));
-    res.status(500).json({ error: "Server error" });
-  }
-};
+      if (existingUser) {
+        res.status(400).json({
+          error:
+            "User already exists",
+        });
+        return;
+      }
 
+      const hashedPassword =
+        await hashPassword(
+          password
+        );
 
-// LOGIN
-const loginHandler = async (
-  req: Request<{}, {}, AuthRequestBody>,
-  res: Response
-): Promise<void> => {
-  try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ where: { email } });
+      const user =
+        await User.create({
+          email,
+          password:
+            hashedPassword,
+          role:
+            "user",
+        });
 
-    if (!user || !(await comparePasswords(password, user.password))) {
-      res.status(401).json({ error: "Invalid credentials" });
+      const token =
+        generateToken(
+          user.id
+        );
+
+      res.status(201).json({
+        message:
+          "User registered",
+        userId:
+          user.id,
+        role:
+          user.role,
+        token,
+      });
+    } catch (error) {
+      if (
+        error instanceof
+        UniqueConstraintError
+      ) {
+        res.status(400).json({
+          error:
+            "User already exists",
+        });
+        return;
+      }
+
+      // Never serialize request data,
+      // password values or database
+      // exception details into logs.
+      console.error(
+        "Register request failed"
+      );
+
+      res.status(500).json({
+        error:
+          "Server error",
+      });
+    }
+  };
+
+export const loginHandler =
+  async (
+    req:
+      Request<
+        {},
+        {},
+        unknown
+      >,
+    res:
+      Response
+  ): Promise<void> => {
+    const validation =
+      validateAuthBody(
+        req.body,
+        "login"
+      );
+
+    if (!validation.ok) {
+      res.status(400).json({
+        error:
+          validation.error,
+      });
       return;
     }
 
-    const token = generateToken(user.id);
-    res.json({ token });
-  } catch (err) {
-    console.error("❌ Login error:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-};
+    const {
+      email,
+      password,
+    } = validation.value;
 
-// Routes
-router.post("/register", registerHandler);
-router.post("/login", loginHandler);
+    try {
+      const user =
+        await findUserByEmail(
+          email
+        );
+
+      if (
+        !user ||
+        !(
+          await comparePasswords(
+            password,
+            user.password
+          )
+        )
+      ) {
+        res.status(401).json({
+          error:
+            "Invalid credentials",
+        });
+        return;
+      }
+
+      const token =
+        generateToken(
+          user.id
+        );
+
+      res.json({
+        token,
+      });
+    } catch {
+      console.error(
+        "Login request failed"
+      );
+
+      res.status(500).json({
+        error:
+          "Server error",
+      });
+    }
+  };
+
+router.post(
+  "/register",
+  registerRateLimiter,
+  registerHandler
+);
+
+router.post(
+  "/login",
+  loginRateLimiter,
+  loginHandler
+);
 
 export default router;

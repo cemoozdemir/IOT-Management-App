@@ -44,6 +44,15 @@ interface FormData {
   confirmPassword: string;
 }
 
+const MIN_PASSWORD_LENGTH =
+  12;
+
+const MAX_PASSWORD_LENGTH =
+  128;
+
+const MAX_EMAIL_LENGTH =
+  254;
+
 const getAuthenticationErrorMessage = (
   error: unknown,
   isLogin: boolean
@@ -52,16 +61,44 @@ const getAuthenticationErrorMessage = (
     const status =
       error.response?.status;
 
-    if (isLogin && status === 401) {
-      return "Email or password is incorrect.";
-    }
+    const apiError =
+      typeof error.response
+        ?.data?.error ===
+      "string"
+        ? error.response
+            .data.error
+        : null;
 
-    if (!isLogin && status === 400) {
-      return "An account with this email already exists.";
+    if (status === 429) {
+      return "Too many attempts. Please wait before trying again.";
     }
 
     if (
-      typeof status === "number" &&
+      isLogin &&
+      status === 401
+    ) {
+      return "Email or password is incorrect.";
+    }
+
+    if (
+      !isLogin &&
+      status === 400
+    ) {
+      if (
+        apiError ===
+        "User already exists"
+      ) {
+        return "An account with this email already exists.";
+      }
+
+      if (apiError) {
+        return apiError;
+      }
+    }
+
+    if (
+      typeof status ===
+        "number" &&
       status >= 500
     ) {
       return "Authentication service is temporarily unavailable. Please try again.";
@@ -169,6 +206,37 @@ const AuthPage: React.FC = () => {
     if (!email || !formData.password) {
       setError(
         "Email and password are required."
+      );
+      return;
+    }
+
+    if (
+      email.length >
+      MAX_EMAIL_LENGTH
+    ) {
+      setError(
+        "Email address is too long."
+      );
+      return;
+    }
+
+    if (
+      formData.password.length >
+      MAX_PASSWORD_LENGTH
+    ) {
+      setError(
+        "Password must not exceed 128 characters."
+      );
+      return;
+    }
+
+    if (
+      !isLogin &&
+      formData.password.length <
+        MIN_PASSWORD_LENGTH
+    ) {
+      setError(
+        "Password must be at least 12 characters."
       );
       return;
     }
@@ -317,6 +385,9 @@ const AuthPage: React.FC = () => {
                   inputMode="email"
                   autoComplete="email"
                   placeholder="you@example.com"
+                  maxLength={
+                    MAX_EMAIL_LENGTH
+                  }
                   value={formData.email}
                   disabled={submitting}
                   aria-invalid={
@@ -357,6 +428,9 @@ const AuthPage: React.FC = () => {
                         : "new-password"
                     }
                     placeholder="Enter your password"
+                    maxLength={
+                      MAX_PASSWORD_LENGTH
+                    }
                     value={formData.password}
                     disabled={submitting}
                     aria-invalid={
@@ -418,6 +492,9 @@ const AuthPage: React.FC = () => {
                       }
                       autoComplete="new-password"
                       placeholder="Repeat your password"
+                      maxLength={
+                        MAX_PASSWORD_LENGTH
+                      }
                       value={
                         formData.confirmPassword
                       }
@@ -502,8 +579,9 @@ const AuthPage: React.FC = () => {
             </ModeSwitch>
 
             <SecurityNote>
-              Your session is stored only
-              after successful authentication.
+              {isLogin
+                ? "Your session is stored only after successful authentication."
+                : "New passwords require at least 12 characters."}
             </SecurityNote>
           </AuthCard>
         </FormContainer>
