@@ -13,7 +13,6 @@ import {
   getDevices,
   revokeDeviceCredential,
   rotateDeviceCredential,
-  updateDevice,
 } from "../api/deviceApi";
 import { AppShell } from "../layout/AppShell";
 import { Button } from "../components/ui/button";
@@ -238,37 +237,6 @@ const Dashboard: React.FC<DashboardProps> = ({
       );
     } finally {
       setIsCreating(false);
-    }
-  };
-
-  const handleUpdate = async (
-    device: Device
-  ) => {
-    const nextStatus =
-      device.status === "online"
-        ? "offline"
-        : "online";
-
-    setBusyDeviceId(device.id);
-    setError(null);
-
-    try {
-      await updateDevice(
-        device.id,
-        {
-          name: device.name,
-          type: device.type,
-          status: nextStatus,
-        }
-      );
-
-      await fetchDevices();
-    } catch {
-      setError(
-        "Device status could not be updated."
-      );
-    } finally {
-      setBusyDeviceId(null);
     }
   };
 
@@ -574,7 +542,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             {onlineCount}
           </MetricValue>
           <MetricHint>
-            Currently marked online
+            Seen within the last 2 minutes
           </MetricHint>
         </MetricCard>
 
@@ -586,7 +554,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             {offlineCount}
           </MetricValue>
           <MetricHint>
-            Currently marked offline
+            No recent authenticated telemetry
           </MetricHint>
         </MetricCard>
       </MetricsGrid>
@@ -759,22 +727,6 @@ const Dashboard: React.FC<DashboardProps> = ({
                       </div>
 
                       <DeviceActions>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={busy}
-                          onClick={() =>
-                            void handleUpdate(
-                              device
-                            )
-                          }
-                        >
-                          {device.status ===
-                          "online"
-                            ? "Set offline"
-                            : "Set online"}
-                        </Button>
-
                         <Button
                           size="sm"
                           variant="outline"

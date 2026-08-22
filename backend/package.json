@@ -11,7 +11,8 @@
     "test:no-custom-token": "node --test tests/no-custom-token-endpoint.test.js",
     "test:device-identity": "node --test tests/device-credential-core.test.js tests/device-auth-middleware.test.js tests/device-credential-migration.test.js tests/device-credential-lifecycle.test.js",
     "test:migration-only": "node --test tests/migration-only-schema.test.js",
-    "test:telemetry": "node --test tests/telemetry-ingestion.test.js tests/telemetry-migration.test.js"
+    "test:telemetry": "node --test tests/telemetry-ingestion.test.js tests/telemetry-migration.test.js",
+    "test:presence": "node --test tests/device-presence.test.js"
   },
   "keywords": [],
   "author": "",
