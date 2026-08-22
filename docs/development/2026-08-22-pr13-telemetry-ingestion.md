@@ -33,3 +33,16 @@ before presence and dashboard telemetry can be implemented.
 
 These are separate follow-up PRs so the ingestion contract remains
 small and independently reversible.
+
+## Review correction — deterministic event time
+
+Remote PR review identified an idempotency edge case when `recordedAt`
+was omitted: the server-generated current time would differ between
+otherwise identical retries using the same `eventId`.
+
+The ingestion contract therefore requires a device-provided
+`recordedAt` ISO 8601 timestamp.
+
+This keeps the complete idempotency payload deterministic across
+network retries and makes conflicting reuse of an `eventId`
+unambiguous.
