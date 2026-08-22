@@ -555,7 +555,7 @@ start_clean_pm2() {
 
   process_node_env="$(
     printf '%s' "$process_json" |
-    jq -r --arg app "$PM2_APP"
+    jq -r --arg app "$PM2_APP" \
       '.[] | select(.name == $app) | (.pm2_env.NODE_ENV // "")'
   )"
 

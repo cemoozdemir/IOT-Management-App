@@ -264,6 +264,21 @@ grep -qF \
   'POST_DEPLOY_PM2_NODE_ENV=PRODUCTION' \
   "$DEPLOY"
 
+#
+# The PM2 NODE_ENV jq command must continue onto its filter line.
+# bash -n does not detect a missing continuation here.
+#
+grep -qF -- \
+  '    jq -r --arg app "$PM2_APP" \' \
+  "$DEPLOY"
+
+# Verify the jq expression itself returns the expected value.
+printf '%s\n' \
+  '[{"name":"iot-api","pm2_env":{"NODE_ENV":"production"}}]' |
+jq -r --arg app "iot-api" \
+  '.[] | select(.name == $app) | (.pm2_env.NODE_ENV // "")' |
+grep -qx 'production'
+
 SAFETY_LINE="$(
   grep -n \
     'database-pre-restore-current-' \
