@@ -86,6 +86,7 @@ require_command() {
 }
 
 git_source() {
+  GIT_OPTIONAL_LOCKS=0 \
   git \
     -c "safe.directory=$SOURCE_DIR" \
     -C "$SOURCE_DIR" \
@@ -357,9 +358,19 @@ echo "PM2_NODE_ENV=$PM2_NODE_ENV"
   fail "PM2 iot-api online değil."
 }
 
-[ "$PM2_NODE_ENV" = "production" ] || {
-  fail "PM2 NODE_ENV production değil."
-}
+case "$PM2_NODE_ENV" in
+  production)
+    echo 'CURRENT_PM2_NODE_ENV=PRODUCTION'
+    ;;
+
+  "")
+    echo 'CURRENT_PM2_NODE_ENV=LEGACY_UNSET_ACCEPTED'
+    ;;
+
+  *)
+    fail "PM2 NODE_ENV açıkça production dışında."
+    ;;
+esac
 
 set +u
 # shellcheck disable=SC1090
@@ -371,6 +382,7 @@ IOT_DB_NAME="${DB_NAME:-}"
 IOT_DB_HOST="${DB_HOST:-}"
 IOT_DB_PORT="${DB_PORT:-5432}"
 IOT_API_PORT="${PORT:-3001}"
+IOT_CANON_NODE_ENV="${NODE_ENV:-}"
 
 unset \
   DB_USER \
@@ -384,6 +396,18 @@ unset \
   NODE_ENV
 
 set -u
+
+if [ -n "$IOT_CANON_NODE_ENV" ] &&
+   [ "$IOT_CANON_NODE_ENV" != "production" ]
+then
+  fail "Canonical .env.production NODE_ENV production dışında."
+fi
+
+if [ "$IOT_CANON_NODE_ENV" = "production" ]; then
+  echo 'CANONICAL_ENV_NODE_ENV=PRODUCTION'
+else
+  echo 'CANONICAL_ENV_NODE_ENV=UNSET_ACCEPTED'
+fi
 
 [ -n "$IOT_DB_USER" ] || fail "DB_USER eksik"
 [ -n "$IOT_DB_PASS" ] || fail "DB_PASS eksik"
@@ -506,6 +530,7 @@ start_clean_pm2() {
   local process_json
   local process_count
   local process_status
+  local process_node_env
   local secret_env
 
   process_json="$(
@@ -528,6 +553,12 @@ start_clean_pm2() {
        .pm2_env.status'
   )"
 
+  process_node_env="$(
+    printf '%s' "$process_json" |
+    jq -r --arg app "$PM2_APP" \
+      '.[] | select(.name == $app) | (.pm2_env.NODE_ENV // "")'
+  )"
+
   secret_env="$(
     printf '%s' "$process_json" |
     jq -r \
@@ -543,7 +574,10 @@ start_clean_pm2() {
 
   [ "$process_count" = "1" ]
   [ "$process_status" = "online" ]
+  [ "$process_node_env" = "production" ]
   [ "$secret_env" = "false" ]
+
+  echo 'POST_DEPLOY_PM2_NODE_ENV=PRODUCTION'
 }
 
 rollback_live_artifact() {
