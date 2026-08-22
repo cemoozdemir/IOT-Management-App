@@ -100,7 +100,8 @@ const LATEST_TELEMETRY_SQL = `
   ) AS latest
   ORDER BY
     latest."recordedAt" DESC,
-    latest."receivedAt" DESC
+    latest."receivedAt" DESC,
+    latest."id" DESC
   LIMIT ${LATEST_TELEMETRY_FETCH_LIMIT}
 `;
 

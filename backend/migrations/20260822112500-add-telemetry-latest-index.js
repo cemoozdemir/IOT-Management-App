@@ -13,7 +13,8 @@ module.exports = {
             "deviceId",
             "metric",
             "recordedAt" DESC,
-            "receivedAt" DESC
+            "receivedAt" DESC,
+            "id" DESC
           )
           `,
           {

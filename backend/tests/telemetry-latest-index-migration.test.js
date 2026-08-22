@@ -71,6 +71,11 @@ test(
       /"receivedAt" DESC/
     );
 
+    assert.match(
+      calls[0].sql,
+      /"id" DESC/
+    );
+
     assert.equal(
       calls[0]
         .options
