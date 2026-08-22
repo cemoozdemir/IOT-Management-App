@@ -171,3 +171,25 @@ A pre-deploy dump can be older than legitimate writes that occurred
 after the migration.
 
 Database restore therefore requires an explicit maintenance decision.
+
+## Concurrency and recovery integrity
+
+Deployment, artifact rollback and explicit database restore share one
+non-blocking mutation lock:
+
+`/run/lock/iot-management-app-deploy.lock`
+
+Only one production mutation workflow can run at a time.
+
+Recovery tools also verify the SHA256 records generated before
+deployment:
+
+- artifact rollback verifies the application archive before extraction;
+- database restore verifies the pre-deploy database dump before
+  destructive schema work.
+
+Database restore verifies that the backup manifest belongs to the
+requested production directory.
+
+Rollback loopback health uses `PORT` from the canonical root-owned
+production environment, with 3001 only as the default.

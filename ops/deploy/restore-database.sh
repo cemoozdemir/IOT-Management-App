@@ -7,6 +7,8 @@ PROD_DIR="${IOT_PROD_DIR:-/home/IOT-Management-App}"
 
 PM2_APP="${IOT_PM2_APP:-iot-api}"
 
+LOCK_FILE="/run/lock/iot-management-app-deploy.lock"
+
 BACKUP_DIR=""
 
 CONFIRM=""
@@ -82,6 +84,18 @@ done
   fail "Explicit database restore confirmation eksik."
 }
 
+for command_name in flock sha256sum; do
+  command -v "$command_name" >/dev/null 2>&1 || {
+    fail "Gerekli komut yok: $command_name"
+  }
+done
+
+exec 9>"$LOCK_FILE"
+
+flock -n 9 || {
+  fail "Başka bir IOT deploy/rollback/restore işlemi aktif."
+}
+
 PROD_DIR="$(
   readlink -m -- "$PROD_DIR"
 )"
@@ -96,9 +110,12 @@ DB_DUMP="$BACKUP_DIR/database-pre-deploy.dump"
 
 MANIFEST="$BACKUP_DIR/manifest.txt"
 
+CHECKSUMS="$BACKUP_DIR/SHA256SUMS"
+
 [ -f "$ENV_FILE" ] || fail "Canonical production env yok"
 [ -f "$DB_DUMP" ] || fail "Pre-deploy DB dump yok"
 [ -f "$MANIFEST" ] || fail "Backup manifest yok"
+[ -f "$CHECKSUMS" ] || fail "SHA256SUMS bulunamadı"
 
 [ "$(
   stat -c '%U:%G' "$ENV_FILE"
@@ -107,6 +124,42 @@ MANIFEST="$BACKUP_DIR/manifest.txt"
 [ "$(
   stat -c '%a' "$ENV_FILE"
 )" = "600" ] || fail "env mode hatalı"
+
+MANIFEST_PROD="$(
+  awk -F= '
+    $1 == "production_dir" {
+      print substr($0, index($0, "=") + 1)
+    }
+  ' "$MANIFEST"
+)"
+
+[ "$MANIFEST_PROD" = "$PROD_DIR" ] || {
+  fail "Database backup başka production path\'e ait."
+}
+
+DB_SUM_LINE="$(
+  awk -v suffix="  $DB_DUMP" '
+    length($0) >= length(suffix) &&
+    substr($0, length($0) - length(suffix) + 1) == suffix {
+      print
+    }
+  ' "$CHECKSUMS"
+)"
+
+DB_SUM_COUNT="$(
+  printf '%s\n' "$DB_SUM_LINE" |
+  sed '/^$/d' |
+  wc -l
+)"
+
+[ "$DB_SUM_COUNT" -eq 1 ] || {
+  fail "Database dump için exact SHA256 kaydı bulunamadı."
+}
+
+printf '%s\n' "$DB_SUM_LINE" |
+sha256sum -c -
+
+echo 'DATABASE_BACKUP_SHA256=VERIFIED'
 
 PM2_JSON="$(
   pm2 jlist

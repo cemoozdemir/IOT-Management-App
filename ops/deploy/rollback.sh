@@ -9,6 +9,8 @@ PUBLIC_BASE="${IOT_PUBLIC_BASE:-https://iot.ozdmr.dev}"
 
 PM2_APP="${IOT_PM2_APP:-iot-api}"
 
+LOCK_FILE="/run/lock/iot-management-app-deploy.lock"
+
 BACKUP_DIR=""
 
 usage() {
@@ -81,6 +83,18 @@ done
   fail "--backup-dir zorunlu."
 }
 
+for command_name in flock sha256sum; do
+  command -v "$command_name" >/dev/null 2>&1 || {
+    fail "Gerekli komut yok: $command_name"
+  }
+done
+
+exec 9>"$LOCK_FILE"
+
+flock -n 9 || {
+  fail "Başka bir IOT deploy/rollback/restore işlemi aktif."
+}
+
 PROD_DIR="$(
   readlink -m -- "$PROD_DIR"
 )"
@@ -95,8 +109,11 @@ MANIFEST="$BACKUP_DIR/manifest.txt"
 
 ARCHIVE="$BACKUP_DIR/application-pre-deploy.tar.gz"
 
+CHECKSUMS="$BACKUP_DIR/SHA256SUMS"
+
 [ -f "$MANIFEST" ] || fail "manifest.txt bulunamadı"
 [ -f "$ARCHIVE" ] || fail "application backup bulunamadı"
+[ -f "$CHECKSUMS" ] || fail "SHA256SUMS bulunamadı"
 [ -f "$ENV_FILE" ] || fail "canonical .env.production yok"
 
 [ "$(
@@ -109,6 +126,25 @@ ARCHIVE="$BACKUP_DIR/application-pre-deploy.tar.gz"
   stat -c '%a' "$ENV_FILE"
 )" = "600" ] || {
   fail ".env.production mode 600 değil."
+}
+
+set +u
+# shellcheck disable=SC1090
+. "$ENV_FILE"
+
+IOT_API_PORT="${PORT:-3001}"
+
+unset DB_USER DB_PASS DB_NAME DB_HOST DB_PORT JWT_SECRET PORT HOST NODE_ENV
+
+set -u
+
+[[ "$IOT_API_PORT" =~ ^[0-9]+$ ]] || {
+  fail "Production API port numeric değil."
+}
+
+[ "$IOT_API_PORT" -ge 1 ] &&
+[ "$IOT_API_PORT" -le 65535 ] || {
+  fail "Production API port geçersiz."
 }
 
 MANIFEST_PROD="$(
@@ -147,6 +183,30 @@ cleanup() {
 }
 
 trap cleanup EXIT
+
+ARTIFACT_SUM_LINE="$(
+  awk -v suffix="  $ARCHIVE" '
+    length($0) >= length(suffix) &&
+    substr($0, length($0) - length(suffix) + 1) == suffix {
+      print
+    }
+  ' "$CHECKSUMS"
+)"
+
+ARTIFACT_SUM_COUNT="$(
+  printf '%s\n' "$ARTIFACT_SUM_LINE" |
+  sed '/^$/d' |
+  wc -l
+)"
+
+[ "$ARTIFACT_SUM_COUNT" -eq 1 ] || {
+  fail "Application artifact için exact SHA256 kaydı bulunamadı."
+}
+
+printf '%s\n' "$ARTIFACT_SUM_LINE" |
+sha256sum -c -
+
+echo 'APPLICATION_BACKUP_SHA256=VERIFIED'
 
 tar \
   -tzf \
@@ -259,7 +319,7 @@ sleep 2
 
 LOCAL_CODE="$(
   http_code \
-    "http://127.0.0.1:3001/api/health" ||
+    "http://127.0.0.1:${IOT_API_PORT}/api/health" ||
   true
 )"
 
