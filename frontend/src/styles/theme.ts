@@ -1,5 +1,3 @@
-import styled from "styled-components";
-
 const sharedTheme = {
   radiusSm: "8px",
   radiusMd: "12px",
@@ -111,89 +109,5 @@ export const darkTheme = {
   focusRing: "rgba(96, 165, 250, 0.38)",
   selectionBg: "rgba(96, 165, 250, 0.22)",
 };
-
-export const Wrapper = styled.div`
-  display: flex;
-  min-height: 100vh;
-  background: ${(props) => props.theme.mainBg};
-
-  @media (max-width: 820px) {
-    display: block;
-  }
-`;
-
-export const VisualPane = styled.div`
-  flex: 1;
-  min-height: 100vh;
-  background:
-    radial-gradient(
-      circle at 20% 20%,
-      rgba(255, 255, 255, 0.18),
-      transparent 35%
-    ),
-    linear-gradient(
-      145deg,
-      ${(props) => props.theme.primary},
-      #0f172a
-    );
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem;
-  font-size: clamp(2rem, 4vw, 3.5rem);
-  line-height: 1.08;
-  font-weight: 750;
-  letter-spacing: -0.04em;
-
-  @media (max-width: 820px) {
-    display: none;
-  }
-`;
-
-export const FormPane = styled.div`
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  background: ${(props) => props.theme.mainBg};
-
-  @media (max-width: 520px) {
-    padding: 1rem;
-  }
-`;
-
-export const FormBox = styled.div`
-  width: 100%;
-  max-width: 430px;
-  padding: 2.25rem;
-  background: ${(props) => props.theme.surface};
-  border: 1px solid ${(props) => props.theme.border};
-  border-radius: ${(props) => props.theme.radiusLg};
-  box-shadow: ${(props) => props.theme.shadowMd};
-
-  @media (max-width: 520px) {
-    padding: 1.5rem;
-  }
-`;
-
-export const Title = styled.h2`
-  margin: 0 0 1.75rem;
-  color: ${(props) => props.theme.text};
-  text-align: center;
-  font-size: 1.6rem;
-  line-height: 1.2;
-  font-weight: 700;
-  letter-spacing: -0.025em;
-`;
-
-export const ToggleText = styled.p`
-  margin: 1.5rem 0 0;
-  color: ${(props) => props.theme.textMuted};
-  text-align: center;
-  font-size: 0.9rem;
-`;
 
 export type ThemeType = typeof lightTheme;
