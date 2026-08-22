@@ -213,3 +213,83 @@ export const EmptyState = styled.div`
   font-size: 0.86rem;
   line-height: 1.55;
 `;
+
+export const CredentialNotice = styled(Card)`
+  margin-bottom: 1rem;
+  overflow: hidden;
+  border-color: ${(props) =>
+    props.theme.borderStrong};
+`;
+
+export const CredentialNoticeBody = styled.div`
+  display: grid;
+  gap: 1rem;
+  padding: 1.1rem;
+`;
+
+export const CredentialHeader = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+  }
+`;
+
+export const CredentialEyebrow = styled.div`
+  margin-bottom: 0.3rem;
+  color: ${(props) => props.theme.textMuted};
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+`;
+
+export const CredentialTitle = styled.div`
+  color: ${(props) => props.theme.text};
+  font-size: 1rem;
+  font-weight: 760;
+`;
+
+export const CredentialDescription = styled.p`
+  max-width: 720px;
+  margin: 0.35rem 0 0;
+  color: ${(props) => props.theme.textMuted};
+  font-size: 0.82rem;
+  line-height: 1.55;
+`;
+
+export const CredentialCodeRow = styled.div`
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.7rem;
+  align-items: stretch;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+export const CredentialValue = styled.code`
+  display: block;
+  min-width: 0;
+  padding: 0.8rem 0.9rem;
+  overflow-wrap: anywhere;
+  border: 1px solid ${(props) => props.theme.border};
+  border-radius: ${(props) => props.theme.radiusSm};
+  background: ${(props) => props.theme.hoverBg};
+  color: ${(props) => props.theme.text};
+  font-size: 0.78rem;
+  line-height: 1.5;
+  user-select: all;
+`;
+
+export const CredentialWarning = styled.div`
+  padding-top: 0.85rem;
+  border-top: 1px solid ${(props) => props.theme.border};
+  color: ${(props) => props.theme.textMuted};
+  font-size: 0.76rem;
+  line-height: 1.5;
+`;

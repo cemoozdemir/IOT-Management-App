@@ -8,7 +8,9 @@
     "build": "tsc",
     "test:security-registration": "node --test tests/public-registration-role.test.js",
     "test:auth-identity": "node --test tests/auth-identity-model.test.js",
-    "test:no-custom-token": "node --test tests/no-custom-token-endpoint.test.js"
+    "test:no-custom-token": "node --test tests/no-custom-token-endpoint.test.js",
+    "test:device-identity": "node --test tests/device-credential-core.test.js tests/device-auth-middleware.test.js tests/device-credential-migration.test.js tests/device-credential-lifecycle.test.js",
+    "test:migration-only": "node --test tests/migration-only-schema.test.js"
   },
   "keywords": [],
   "author": "",
