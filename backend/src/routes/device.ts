@@ -6,6 +6,10 @@ import sequelize from "../config/database";
 import {
   authenticate,
 } from "../middleware/authMiddleware";
+import {
+  userMutationRateLimiter,
+  userReadRateLimiter,
+} from "../middleware/rateLimits";
 import Device from "../models/Device";
 import {
   AuthenticatedRequest,
@@ -13,6 +17,10 @@ import {
 import {
   withDerivedDevicePresence,
 } from "../utils/devicePresence";
+import {
+  validateDeviceCreateBody,
+  validateDeviceUpdateBody,
+} from "../utils/requestValidation";
 import {
   issueDeviceCredential,
   revokeActiveDeviceCredentials,
@@ -60,24 +68,13 @@ const findOwnedDevice = async (
 router.post(
   "/",
   authenticate,
+  userMutationRateLimiter,
   async (
     req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
   ): Promise<void> => {
     try {
-      const name =
-        typeof req.body?.name ===
-        "string"
-          ? req.body.name.trim()
-          : "";
-
-      const type =
-        typeof req.body?.type ===
-        "string"
-          ? req.body.type.trim()
-          : "";
-
       if (!req.user) {
         res.status(403).json({
           error:
@@ -86,13 +83,23 @@ router.post(
         return;
       }
 
-      if (!name || !type) {
+      const validation =
+        validateDeviceCreateBody(
+          req.body
+        );
+
+      if (!validation.ok) {
         res.status(400).json({
           error:
-            "Device name and type are required",
+            validation.error,
         });
         return;
       }
+
+      const {
+        name,
+        type,
+      } = validation.value;
 
       const result =
         await sequelize.transaction(
@@ -155,6 +162,7 @@ router.post(
 router.get(
   "/",
   authenticate,
+  userReadRateLimiter,
   async (
     req: AuthenticatedRequest,
     res: Response,
@@ -201,19 +209,13 @@ router.get(
 router.put(
   "/:id",
   authenticate,
+  userMutationRateLimiter,
   async (
     req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
   ): Promise<void> => {
     try {
-      const body =
-        req.body &&
-        typeof req.body ===
-          "object"
-          ? req.body
-          : {};
-
       if (!req.user) {
         res.status(403).json({
           error:
@@ -222,15 +224,15 @@ router.put(
         return;
       }
 
-      if (
-        Object.prototype.hasOwnProperty.call(
-          body,
-          "status"
-        )
-      ) {
+      const validation =
+        validateDeviceUpdateBody(
+          req.body
+        );
+
+      if (!validation.ok) {
         res.status(400).json({
           error:
-            "Device status is derived from telemetry",
+            validation.error,
         });
         return;
       }
@@ -249,34 +251,8 @@ router.put(
         return;
       }
 
-      const updates:
-        Record<
-          string,
-          unknown
-        > = {};
-
-      if (
-        Object.prototype.hasOwnProperty.call(
-          body,
-          "name"
-        )
-      ) {
-        updates.name =
-          body.name;
-      }
-
-      if (
-        Object.prototype.hasOwnProperty.call(
-          body,
-          "type"
-        )
-      ) {
-        updates.type =
-          body.type;
-      }
-
       await device.update(
-        updates
+        validation.value
       );
 
       res.json(
@@ -296,6 +272,7 @@ router.put(
 router.post(
   "/:id/credential/rotate",
   authenticate,
+  userMutationRateLimiter,
   async (
     req: AuthenticatedRequest,
     res: Response,
@@ -349,6 +326,7 @@ router.post(
 router.delete(
   "/:id/credential",
   authenticate,
+  userMutationRateLimiter,
   async (
     req: AuthenticatedRequest,
     res: Response,
@@ -397,6 +375,7 @@ router.delete(
 router.delete(
   "/:id",
   authenticate,
+  userMutationRateLimiter,
   async (
     req: AuthenticatedRequest,
     res: Response,

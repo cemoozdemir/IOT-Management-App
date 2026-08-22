@@ -14,7 +14,8 @@
     "test:telemetry": "node --test tests/telemetry-ingestion.test.js tests/telemetry-migration.test.js",
     "test:presence": "node --test tests/device-presence.test.js",
     "test:telemetry-read": "node --test tests/telemetry-read.test.js tests/telemetry-latest-index-migration.test.js",
-    "test:telemetry-read-pg": "node --test tests/telemetry-read-postgres.test.js"
+    "test:telemetry-read-pg": "node --test tests/telemetry-read-postgres.test.js",
+    "test:security-hardening": "node --test tests/security-hardening.test.js"
   },
   "keywords": [],
   "author": "",
@@ -32,8 +33,7 @@
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.14.1",
     "sequelize": "^6.37.6",
-    "sequelize-cli": "^6.6.2",
-    "ws": "^8.18.1"
+    "sequelize-cli": "^6.6.2"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
@@ -42,7 +42,6 @@
     "@types/express-rate-limit": "^5.1.3",
     "@types/helmet": "^0.0.48",
     "@types/node": "^22.13.10",
-    "@types/ws": "^8.18.0",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.8.2"
