@@ -19,7 +19,8 @@
     "test:deploy-safety": "bash ../ops/deploy/test-deploy-safety.sh",
     "test:camera-source": "node --test tests/camera-source-migration.test.js",
     "test:camera-settings": "node --test tests/camera-source-settings.test.js",
-    "test:media-gateway": "node --test tests/media-gateway-service.test.js"
+    "test:media-gateway": "node --test tests/media-gateway-service.test.js",
+    "test:media-reconciliation": "node --test tests/camera-media-reconciliation.test.js"
   },
   "keywords": [],
   "author": "",

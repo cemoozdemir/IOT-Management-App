@@ -25,6 +25,10 @@ import {
   userMutationRateLimiter,
   userReadRateLimiter,
 } from "../middleware/rateLimits";
+import {
+  detachCameraMediaState,
+  reconcileCameraMediaState,
+} from "../services/cameraMediaReconciliationService";
 import CameraSource from "../models/CameraSource";
 import Device from "../models/Device";
 import {
@@ -725,6 +729,10 @@ router.post(
           ...parsedSource,
         });
 
+      await reconcileCameraMediaState(
+        camera
+      );
+
       res.status(201).json(
         serializeCameraSource(
           camera
@@ -843,6 +851,10 @@ router.put(
 
       await camera.update(
         updates
+      );
+
+      await reconcileCameraMediaState(
+        camera
       );
 
       res.json(
@@ -1024,6 +1036,19 @@ router.delete(
         res.status(404).json({
           error:
             "Camera not found",
+        });
+        return;
+      }
+
+      const detached =
+        await detachCameraMediaState(
+          camera
+        );
+
+      if (!detached.ok) {
+        res.status(503).json({
+          error:
+            "Media gateway unavailable",
         });
         return;
       }
