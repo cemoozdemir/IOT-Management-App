@@ -11,6 +11,7 @@ import {
 } from "./middleware/rateLimits";
 import deviceRoutes from "./routes/device";
 import cameraRoutes from "./routes/camera";
+import mediaRoutes from "./routes/media";
 import telemetryRoutes from "./routes/telemetry";
 import authRoutes from "./routes/auth";
 import "./config/env";
@@ -119,6 +120,11 @@ app.use(
 app.use(
   "/api/cameras",
   cameraRoutes
+);
+
+app.use(
+  "/api/media",
+  mediaRoutes
 );
 
 app.use(
