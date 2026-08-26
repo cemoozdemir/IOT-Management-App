@@ -1,4 +1,5 @@
 import express, {
+  NextFunction,
   Response,
 } from "express";
 
@@ -15,6 +16,11 @@ import CameraSource
 
 import Device
   from "../models/Device";
+
+import {
+  authorizeMediaRequest,
+  MediaAuthorizationIdentity,
+} from "../services/mediaAuthorizationService";
 
 import {
   reconcileCameraMediaState,
@@ -65,6 +71,93 @@ const findOwnedCamera =
     });
   };
 
+const mediaAuthorizationLookup =
+  async (
+    identity:
+      MediaAuthorizationIdentity
+  ): Promise<boolean> => {
+    const camera =
+      await CameraSource.findOne({
+        where: {
+          id:
+            identity.cameraId,
+
+          streamPath:
+            identity.streamPath,
+
+          enabled:
+            true,
+        },
+
+        include: [
+          {
+            model:
+              Device,
+
+            where: {
+              userId:
+                identity.userId,
+            },
+
+            attributes: [],
+
+            required:
+              true,
+          },
+        ],
+      });
+
+    return Boolean(
+      camera
+    );
+  };
+
+/*
+ * MediaMTX HTTP authentication callback.
+ *
+ * MediaMTX POSTs its authentication payload here.
+ * Only short-lived media-read tokens for the exact
+ * camera path are accepted.
+ *
+ * Never log request bodies or token values.
+ */
+router.post(
+  "/auth",
+  async (
+    req,
+    res:
+      Response,
+    next:
+      NextFunction
+  ): Promise<void> => {
+    try {
+      const authorized =
+        await authorizeMediaRequest(
+          req.body,
+          mediaAuthorizationLookup
+        );
+
+      if (!authorized) {
+        res.status(401).json({
+          error:
+            "Unauthorized media request",
+        });
+        return;
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      /*
+       * Database or internal failures must fail
+       * closed. Passing to the common handler
+       * returns 500, which MediaMTX interprets
+       * as an authentication failure.
+       */
+      next(error);
+    }
+  }
+);
+
 router.post(
   "/sessions/:cameraId",
   authenticate,
@@ -73,7 +166,9 @@ router.post(
     req:
       AuthenticatedRequest,
     res:
-      Response
+      Response,
+    next:
+      NextFunction
   ): Promise<void> => {
     if (!req.user) {
       res.status(403).json({
@@ -95,52 +190,56 @@ router.post(
       return;
     }
 
-    const camera =
-      await findOwnedCamera(
-        req.params.cameraId,
-        req.user.id
+    try {
+      const camera =
+        await findOwnedCamera(
+          req.params.cameraId,
+          req.user.id
+        );
+
+      if (!camera) {
+        res.status(404).json({
+          error:
+            "Camera not found",
+        });
+        return;
+      }
+
+      if (!camera.enabled) {
+        res.status(409).json({
+          error:
+            "Camera is disabled",
+        });
+        return;
+      }
+
+      const reconciliation =
+        await reconcileCameraMediaState(
+          camera
+        );
+
+      if (
+        !reconciliation.ok
+      ) {
+        res.status(503).json({
+          error:
+            "Media gateway unavailable",
+        });
+        return;
+      }
+
+      const session =
+        buildMediaSessionResponse(
+          camera,
+          req.user.id
+        );
+
+      res.status(201).json(
+        session
       );
-
-    if (!camera) {
-      res.status(404).json({
-        error:
-          "Camera not found",
-      });
-      return;
+    } catch (error) {
+      next(error);
     }
-
-    if (!camera.enabled) {
-      res.status(409).json({
-        error:
-          "Camera is disabled",
-      });
-      return;
-    }
-
-    const reconciliation =
-      await reconcileCameraMediaState(
-        camera
-      );
-
-    if (
-      !reconciliation.ok
-    ) {
-      res.status(503).json({
-        error:
-          "Media gateway unavailable",
-      });
-      return;
-    }
-
-    const session =
-      buildMediaSessionResponse(
-        camera,
-        req.user.id
-      );
-
-    res.status(201).json(
-      session
-    );
   }
 );
 

@@ -21,7 +21,8 @@
     "test:camera-settings": "node --test tests/camera-source-settings.test.js",
     "test:media-gateway": "node --test tests/media-gateway-service.test.js",
     "test:media-reconciliation": "node --test tests/camera-media-reconciliation.test.js",
-    "test:media-session": "node --test tests/media-session.test.js"
+    "test:media-session": "node --test tests/media-session.test.js",
+    "test:media-auth": "node --test tests/media-authorization.test.js"
   },
   "keywords": [],
   "author": "",
