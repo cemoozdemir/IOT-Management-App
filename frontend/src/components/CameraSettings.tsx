@@ -18,6 +18,7 @@ import {
 import {
   Button,
 } from "./ui/button";
+import CameraLiveView from "./CameraLiveView";
 import {
   Card,
   CardContent,
@@ -177,6 +178,13 @@ const CameraSettings:
     const [
       testingCameraId,
       setTestingCameraId,
+    ] = useState<
+      string | null
+    >(null);
+
+    const [
+      liveCameraId,
+      setLiveCameraId,
     ] = useState<
       string | null
     >(null);
@@ -493,6 +501,15 @@ const CameraSettings:
           await deleteCamera(
             camera.id
           );
+
+          if (
+            liveCameraId ===
+            camera.id
+          ) {
+            setLiveCameraId(
+              null
+            );
+          }
 
           if (
             editingCameraId ===
@@ -857,6 +874,32 @@ const CameraSettings:
                           size="sm"
                           variant="outline"
                           disabled={
+                            busy ||
+                            !camera.enabled
+                          }
+                          onClick={() =>
+                            setLiveCameraId(
+                              (
+                                current
+                              ) =>
+                                current ===
+                                camera.id
+                                  ? null
+                                  : camera.id
+                            )
+                          }
+                        >
+                          {liveCameraId ===
+                          camera.id
+                            ? "Close live"
+                            : "Live"}
+                        </Button>
+
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={
                             busy
                           }
                           onClick={() =>
@@ -888,6 +931,24 @@ const CameraSettings:
                           Delete
                         </Button>
                       </CameraActions>
+
+                      {liveCameraId ===
+                        camera.id &&
+                        camera.enabled && (
+                        <CameraLiveView
+                          cameraId={
+                            camera.id
+                          }
+                          cameraName={
+                            camera.name
+                          }
+                          onClose={() =>
+                            setLiveCameraId(
+                              null
+                            )
+                          }
+                        />
+                      )}
 
                       {editing && (
                         <CameraEditPanel
