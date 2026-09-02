@@ -108,3 +108,46 @@ export const CameraVideo =
     background:
       #000;
   `;
+
+export const CameraTransportBadge =
+  styled.span<{
+    $degraded?:
+      boolean;
+    $offline?:
+      boolean;
+  }>`
+    display:
+      inline-flex;
+
+    align-items:
+      center;
+
+    padding:
+      0.18rem
+      0.45rem;
+
+    border-radius:
+      999px;
+
+    background:
+      ${(props) =>
+        props.$offline
+          ? props.theme.dangerSoft
+          : props.$degraded
+            ? props.theme.hoverBg
+            : props.theme.successSoft};
+
+    color:
+      ${(props) =>
+        props.$offline
+          ? props.theme.danger
+          : props.$degraded
+            ? props.theme.textMuted
+            : props.theme.success};
+
+    font-size:
+      0.68rem;
+
+    font-weight:
+      700;
+  `;
