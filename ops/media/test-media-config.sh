@@ -130,4 +130,106 @@ do
   fi
 done
 
+INSTALLER="$ROOT/install-mediamtx.sh"
+NGINX="$ROOT/nginx-media.conf"
+ENV_EXAMPLE="$ROOT/mediamtx.env.example"
+FIREWALL="$ROOT/FIREWALL.md"
+PREFLIGHT="$ROOT/runtime-preflight.sh"
+
+for required_file in \
+  "$INSTALLER" \
+  "$NGINX" \
+  "$ENV_EXAMPLE" \
+  "$FIREWALL" \
+  "$PREFLIGHT"
+do
+  [ -f "$required_file" ] ||
+    fail \
+      "Eksik media deployment dosyası: $required_file"
+done
+
+bash -n \
+  "$INSTALLER"
+
+bash -n \
+  "$PREFLIGHT"
+
+grep -qF \
+  'VERSION="1.19.2"' \
+  "$INSTALLER"
+
+grep -qF \
+  'checksums.sha256' \
+  "$INSTALLER"
+
+grep -qF \
+  'sha256sum' \
+  "$INSTALLER"
+
+grep -qF \
+  'SERVICE_ACTIVE=NOT_CHANGED' \
+  "$INSTALLER"
+
+grep -qF \
+  'proxy_pass http://127.0.0.1:8889/;' \
+  "$NGINX"
+
+grep -qF \
+  'proxy_pass http://127.0.0.1:8888/;' \
+  "$NGINX"
+
+grep -qF \
+  'proxy_redirect / /media/webrtc/;' \
+  "$NGINX"
+
+grep -qF \
+  'proxy_redirect / /media/hls/;' \
+  "$NGINX"
+
+test "$(
+  grep -Fc \
+    'proxy_set_header Authorization $http_authorization;' \
+    "$NGINX"
+)" -eq 2
+
+if grep -Eq \
+  'proxy_pass[[:space:]]+http://[^;]*:(9997|8554)' \
+  "$NGINX"
+then
+  fail \
+    "Control API veya RTSP Nginx üzerinden expose ediliyor."
+fi
+
+grep -qF \
+  'MTX_WEBRTCADDITIONALHOSTS=iot.ozdmr.dev' \
+  "$ENV_EXAMPLE"
+
+grep -qF \
+  '8189/udp' \
+  "$FIREWALL"
+
+grep -qF \
+  '127.0.0.1:9997/tcp' \
+  "$FIREWALL"
+
+grep -qF \
+  '127.0.0.1:8554/tcp' \
+  "$FIREWALL"
+
+grep -qF \
+  'ProtectProc=invisible' \
+  "$SERVICE"
+
+grep -qF \
+  'ProcSubset=pid' \
+  "$SERVICE"
+
+grep -qF \
+  'SystemCallArchitectures=native' \
+  "$SERVICE"
+
+grep -qF \
+  'MEDIA_RUNTIME_PREFLIGHT=GEÇTİ' \
+  "$PREFLIGHT"
+
 echo 'MEDIA_CONFIG_STATIC_CONTRACT=GEÇTİ'

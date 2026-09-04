@@ -80,7 +80,72 @@ and must not contain camera credentials.
 
 ## Deployment
 
-This directory only defines the media service contract.
+The repository contains the media deployment contract, but
+development does not automatically install, enable or start
+MediaMTX and does not change the host firewall or Nginx.
 
-Installation, firewall changes, Nginx proxying and service
-activation are performed in a later deployment step.
+### Install without activation
+
+Run:
+
+    sudo ./ops/media/install-mediamtx.sh
+
+The installer:
+
+- pins MediaMTX 1.19.2;
+- downloads the official release archive;
+- verifies the archive against the official
+  `checksums.sha256`;
+- creates the dedicated `iot-media` system account;
+- installs the binary, configuration and systemd unit;
+- preserves an existing `/etc/iot-manager/mediamtx.env`;
+- runs `systemctl daemon-reload`;
+- does not enable or start the service by default.
+
+### Activate explicitly
+
+After reviewing production configuration:
+
+    sudo ./ops/media/install-mediamtx.sh --activate
+
+Activation enables and restarts:
+
+    iot-manager-media.service
+
+### Nginx
+
+`nginx-media.conf` is intended to be included inside the
+existing HTTPS server block.
+
+It proxies:
+
+- `/media/webrtc/` to `127.0.0.1:8889`;
+- `/media/hls/` to `127.0.0.1:8888`.
+
+The MediaMTX Control API on port `9997` and internal RTSP
+listener on port `8554` must never be proxied publicly.
+
+The proxy forwards the short-lived browser Authorization
+header used by WebRTC/WHEP and authenticated HLS.
+
+### Firewall
+
+See `FIREWALL.md`.
+
+Only UDP port `8189` is intended to be opened specifically
+for direct WebRTC ICE media traffic.
+
+### Runtime preflight
+
+After MediaMTX has been activated:
+
+    sudo ./ops/media/runtime-preflight.sh
+
+The preflight checks:
+
+- systemd service state;
+- localhost-only Control API, RTSP, HLS and WHEP listeners;
+- absence of public TCP listeners on those ports;
+- UDP `8189` ICE listener;
+- localhost Control API health;
+- Nginx syntax when Nginx is installed.
