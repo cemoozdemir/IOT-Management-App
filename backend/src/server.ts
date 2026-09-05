@@ -1,3 +1,10 @@
+import {
+  createGracefulShutdownHandler,
+  runStartupMediaReconciliation,
+} from "./services/applicationLifecycleService";
+import {
+  reconcileAllCameraMediaStates,
+} from "./services/cameraMediaReconciliationService";
 import express, {
   Application,
   ErrorRequestHandler,
@@ -227,9 +234,33 @@ const HOST =
   process.env.HOST ||
   "127.0.0.1";
 
+const gracefulShutdown =
+  createGracefulShutdownHandler(
+    server,
+    sequelize
+  );
+
+process.once(
+  "SIGTERM",
+  () => {
+    void gracefulShutdown("SIGTERM");
+  }
+);
+
+process.once(
+  "SIGINT",
+  () => {
+    void gracefulShutdown("SIGINT");
+  }
+);
+
 const startServer =
   async (): Promise<void> => {
     await sequelize.authenticate();
+
+    await runStartupMediaReconciliation(
+      reconcileAllCameraMediaStates
+    );
 
     server.listen(
       PORT,
